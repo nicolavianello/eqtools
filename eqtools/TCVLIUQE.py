@@ -137,10 +137,14 @@ class TCVLIUQETree(EFITTree):
             increasing. Default is False (use slower, safer method).
     """
     def __init__(self, shot, tree='tcv_shot', length_unit='m', gfile='g_eqdsk',
-                 afile='a_eqdsk', tspline=False, monotonic=True):
+                 afile='a_eqdsk', tspline=False, monotonic=True,
+                 remote=False):
         # this is the root tree where all the LIUQE results are stored
         root = r'\results'
-
+        if remote is False:
+            self.server='tcvdata.epfl.ch'
+        else:
+            self.server='localhost:1600'
         super(TCVLIUQETree, self).__init__(shot, tree, root,
                                            length_unit=length_unit,
                                            gfile=gfile, afile=afile,
@@ -524,28 +528,42 @@ class TCVLIUQETree(EFITTree):
         """returns FF' function used for grad-shafranov solutions.
 
         Returns:
-            FFprime (Array): [nt,npsi] array of FF' fromgrad-shafranov solution.
+            FFprime (Array): [nt,npsi] array of FF' from
+            grad-shafranov solution.
 
         Raises:
             ValueError: if module cannot retrieve data from MDS tree.
         """
-        raise NotImplementedError()
-        # if self._ffprim is None:
-        #     try:
-        #         FFPrimeNode = self._MDSTree.getNode(
-        #         self._root+self._gfile+':ffprim')
-        #         self._ffprim = FFPrimeNode.data()
-        #         self._defaultUnits['_ffprim'] = str(FFPrimeNode.units)
-        #     except TreeException:
-        #         raise ValueError('data retrieval failed.')
-        # return self._ffprim.copy()
+        if self._ffprim is None:
+            try:
+                fluxFFNode = self._MDSTree.getNode(self._root+'::ttpr_coeffs')
+                # Liuqe the data are divided by mu_0
+                # and following the way chease work we normalize
+                # for mu_0/B0
+                # we normalize appropriately as done in
+                # read_results_for_chease
+                duData = (fluxFFNode.data() *
+                          scipy.constants.mu_0)
+                # then we build an appropriate grid
+                nPsi = self.getRmidPsi().shape[1]
+                psiV = scipy.linspace(1, 0, nPsi)
+                rad = [scipy.ones(psiV.size)]
+                for i in range(duData.shape[1]-1):
+                    rad += [rad[-1]*psiV]
+                rad = scipy.vstack(rad)
+                self._ffprim = scipy.dot(duData, rad)
+                self._defaultUnits['_ffprim'] = ' '
+            except TreeException:
+                raise ValueError('data retrieval failed.')
+        return self._ffprim.copy()
 
     # ---  16
     def getPPrime(self):
         """returns plasma pressure gradient as a function of psi.
 
         Returns:
-            pprime (Array): [nt,npsi] array of pressure gradient on flux surface 
+            pprime (Array): [nt,npsi] array of pressure
+            gradient on flux surface
             psi from grad-shafranov solution.
 
         Raises:
@@ -857,8 +875,10 @@ class TCVLIUQETree(EFITTree):
                 # introduce to be consistent with TDI function tcv_eq.fun
                 # almost 0.88 m
                 RMaj = 0.88/0.996
-                # open a connection
-                conn = MDSplus.Connection('tcvdata.epfl.ch')
+#                btTree = self._MDSTree.getNode(r'\magnetics::iphi')
+#                bt = btTree.data()*19.2e-6/RMaj
+#                btTime = btTree.data()
+                conn = MDSplus.Connection(self.server)
                 conn.openTree('tcv_shot', self._shot)
                 bt = conn.get('tcv_eq("BZERO")').data()[0]/RMaj
                 btTime = conn.get('dim_of(tcv_eq("BZERO"))').data()
@@ -921,7 +941,7 @@ class TCVLIUQETree(EFITTree):
         """
         if self._IpMeas is None:
             try:
-                conn = MDSplus.Connection('tcvdata.epfl.ch')
+                conn = MDSplus.Connection(self.server)
                 conn.openTree('tcv_shot', self._shot)
                 ip = conn.get('tcv_ip()').data()
                 ipTime = conn.get('dim_of(tcv_ip())').data()
