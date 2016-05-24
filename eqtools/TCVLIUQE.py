@@ -466,7 +466,7 @@ class TCVLIUQETree(EFITTree):
                 # for mu_0/B0
                 # we normalize appropriately as done in
                 # read_results_for_chease
-                _zb0 = self.getBtVac()[:, None]*0.88
+                _zb0 = self.getBtVac()[:, None]
                 duData = (fluxFFNode.data() *
                           scipy.constants.mu_0)
                 # then we build an appropriate grid
@@ -483,7 +483,7 @@ class TCVLIUQETree(EFITTree):
                         (self.getFluxAxis().size, 1))*2 *
                     scipy.subtract(_du.transpose(),
                                    _du[:, -1].transpose()).transpose() +
-                    (_zb0*0.88/0.996)**2)
+                    (_zb0*0.88)**2)
 
                 self._defaultUnits['_fpol'] = 'T*m'
             except TreeException:
@@ -875,14 +875,14 @@ class TCVLIUQETree(EFITTree):
                 # introduce to be consistent with TDI function tcv_eq.fun
                 # almost 0.88 m
                 RMaj = 0.88/0.996
-#                btTree = self._MDSTree.getNode(r'\magnetics::iphi')
-#                bt = btTree.data()*19.2e-6/RMaj
-#                btTime = btTree.data()
-                conn = MDSplus.Connection(self.server)
-                conn.openTree('tcv_shot', self._shot)
-                bt = conn.get('tcv_eq("BZERO")').data()[0]/RMaj
-                btTime = conn.get('dim_of(tcv_eq("BZERO"))').data()
-                conn.closeTree(self._tree, self._shot)
+                btTree = self._MDSTree.getNode(r'\magnetics::iphi')
+                bt = btTree.data().ravel()*19.2e-6/RMaj
+                btTime = btTree.getDimensionAt().data()
+                # conn = MDSplus.Connection(self.server)
+                # conn.openTree('tcv_shot', self._shot)
+                # bt = conn.get('tcv_eq("BZERO")').data()[0]/RMaj
+                # btTime = conn.get('dim_of(tcv_eq("BZERO"))').data()
+                # conn.closeTree(self._tree, self._shot)
                 # we need to interpolate on the time basis of LIUQE
                 self._btaxv = scipy.interp(self.getTimeBase(), btTime, bt)
                 self._defaultUnits['_btaxv'] = 'T'
@@ -941,11 +941,14 @@ class TCVLIUQETree(EFITTree):
         """
         if self._IpMeas is None:
             try:
-                conn = MDSplus.Connection(self.server)
-                conn.openTree('tcv_shot', self._shot)
-                ip = conn.get('tcv_ip()').data()
-                ipTime = conn.get('dim_of(tcv_ip())').data()
-                conn.closeTree(self._tree, self._shot)
+                # conn = MDSplus.Connection(self.server)
+                # conn.openTree('tcv_shot', self._shot)
+                # ip = conn.get('tcv_ip()').data()
+                # ipTime = conn.get('dim_of(tcv_ip())').data()
+                # conn.closeTree(self._tree, self._shot)
+                ipNode = self._MDSTree.getNode(r'\magnetics::iplasma:trapeze')
+                ip = ipNode.data()
+                ipTime = ipNode.getDimensionAt().data()
                 self._IpMeas = scipy.interp(self.getTimeBase(), ipTime, ip)
                 self._defaultUnits['_IpMeas'] = 'A'
             except (TreeException, AttributeError):
