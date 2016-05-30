@@ -467,6 +467,7 @@ class TCVLIUQETree(EFITTree):
                 # we normalize appropriately as done in
                 # read_results_for_chease
                 _zb0 = self.getBtVac()[:, None]
+                _zb0Sign = scipy.sign(_zb0.mean())
                 duData = (fluxFFNode.data() *
                           scipy.constants.mu_0)
                 # then we build an appropriate grid
@@ -477,7 +478,7 @@ class TCVLIUQETree(EFITTree):
                     rad += [rad[-1]*psiV*(i+1)/(i+2)]
                 rad = scipy.vstack(rad)
                 _du = scipy.dot(duData, rad)
-                self._fpol = scipy.sqrt(
+                self._fpol = _zb0Sign*scipy.sqrt(
                     scipy.reshape(
                         self.getFluxAxis(),
                         (self.getFluxAxis().size, 1))*2 *
@@ -1122,20 +1123,18 @@ class TCVLIUQETree(EFITTree):
     # ---  61
     def plotFlux(self, fill=True, mask=False):
         """Plots LIQUE TCV flux contours directly from psi grid.
-        
         Returns the Figure instance created and the time slider widget (in case
         you need to modify the callback). `f.axes` contains the contour plot as
         the first element and the time slice slider as the second element.
-        
         Keyword Args:
             fill (Boolean):
-                Set True to plot filled contours.  Set False (default) to plot white-background
+                Set True to plot filled contours.  Set False (default)
+                to plot white-background
                 color contours.
         """
-        
         try:
             psiRZ = self.getFluxGrid()
-            rGrid = self.getRGrid(length_unit = 'm')
+            rGrid = self.getRGrid(length_unit='m')
             zGrid = self.getZGrid(length_unit='m')
             t = self.getTimeBase()
 
@@ -1156,7 +1155,8 @@ class TCVLIUQETree(EFITTree):
             macx = None
             macy = None
 
-        # event handler for arrow key events in plot windows.  Pass slider object
+        # event handler for arrow key events in plot windows.
+        # Pass slider object
         # to update as masked argument using lambda function
         # lambda evt: arrow_respond(my_slider,evt)
         def arrowRespond(slider, event):
@@ -1180,24 +1180,30 @@ class TCVLIUQETree(EFITTree):
         psi.set_xlim([0.6, 1.2])
         psi.set_ylim([-0.8, 0.8])
 
-        timeSliderSub = fluxPlot.add_subplot(gs[1,0])
+        timeSliderSub = fluxPlot.add_subplot(gs[1, 0])
         title = fluxPlot.suptitle('')
 
         # dummy plot to get x,ylims
-        psi.contour(rGrid,zGrid,psiRZ[0],10, colors='k')
+        psi.contour(rGrid, zGrid, psiRZ[0], 10, colors='k')
 
         # generate graphical mask for limiter wall
         if mask:
             xlim = psi.get_xlim()
             ylim = psi.get_ylim()
-            bound_verts = [(xlim[0],ylim[0]),(xlim[0],ylim[1]),(xlim[1],ylim[1]),(xlim[1],ylim[0]),(xlim[0],ylim[0])]
-            poly_verts = [(limx[i],limy[i]) for i in range(len(limx) - 1, -1, -1)]
+            bound_verts = [(xlim[0], ylim[0]), (xlim[0], ylim[1]),
+                           (xlim[1], ylim[1]), (xlim[1], ylim[0]),
+                           (xlim[0], ylim[0])]
+            poly_verts = [(limx[i], limy[i]) for i in
+                          range(len(limx) - 1, -1, -1)]
 
             bound_codes = [mpath.Path.MOVETO] + (len(bound_verts) - 1) * [mpath.Path.LINETO]
             poly_codes = [mpath.Path.MOVETO] + (len(poly_verts) - 1) * [mpath.Path.LINETO]
 
-            path = mpath.Path(bound_verts + poly_verts, bound_codes + poly_codes)
-            patch = mpatches.PathPatch(path,facecolor='white',edgecolor='none')
+            path = mpath.Path(bound_verts + poly_verts,
+                              bound_codes + poly_codes)
+            patch = mpatches.PathPatch(path,
+                                       facecolor='white',
+                                       edgecolor='none')
 
         def updateTime(val):
             psi.clear()
