@@ -743,7 +743,10 @@ class TCVLIUQETree(EFITTree):
         if self._aLCFS is None:
             try:
                 _dummy = self.getRmidPsi()
-                self._aLCFS = _dummy[:, _dummy.shape[1] - 1]
+                # remember that it is the minor Radius and
+                # getRmidPsi() give the absolute value
+                RMaj = 0.88/0.996
+                self._aLCFS = _dummy[:, _dummy.shape[1] - 1] - RMaj
                 self._defaultUnits['_aLCFS'] = 'm'
             except TreeException:
                 raise ValueError('data retrieval failed.')
@@ -771,7 +774,6 @@ class TCVLIUQETree(EFITTree):
                 # we compute this by adding the Major radius
                 # of the machine to the computed AOut()
                 # almost 0.88
-                RMaj = 0.88/0.996
                 self._RmidLCFS = self.getAOut()+RMaj
                 # The units aren't properly stored in the tree for this one!
                 # Should be meters.
