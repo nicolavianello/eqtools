@@ -774,6 +774,7 @@ class TCVLIUQETree(EFITTree):
                 # we compute this by adding the Major radius
                 # of the machine to the computed AOut()
                 # almost 0.88
+                RMaj = 0.88/0.996
                 self._RmidLCFS = self.getAOut()+RMaj
                 # The units aren't properly stored in the tree for this one!
                 # Should be meters.
