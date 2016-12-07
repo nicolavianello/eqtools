@@ -747,11 +747,7 @@ class TCVLIUQETree(EFITTree):
                 # getRmidPsi() give the absolute value
                 RMaj = 0.88/0.996
                 self._aLCFS = _dummy[:, _dummy.shape[1] - 1] - RMaj
-<<<<<<< HEAD
                 self._defaultUnits['_aLCFS']='m'
-=======
-                self._defaultUnits['_aLCFS'] = 'm'
->>>>>>> b8dc97073105639878e250d8c9b7b60da53a517d
             except TreeException:
                 raise ValueError('data retrieval failed.')
         unit_factor = self._getLengthConversionFactor(
