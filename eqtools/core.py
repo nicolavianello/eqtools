@@ -806,11 +806,15 @@ class Equilibrium(object):
         )
         
         if self._tricubic:
-            psi_boundary = self._getLCFSPsiSpline()(blob[0]).reshape(blob[-1])
-            psi_0 = self._getPsi0Spline()(blob[0]).reshape(blob[-1])
+            psi_boundary = -1*self.getCurrentSign() * \
+                           self._getLCFSPsiSpline()(blob[0]).reshape(blob[-1])
+            psi_0 = -1*self.getCurrentSign() * \
+                    self._getPsi0Spline()(blob[0]).reshape(blob[-1])
         else:
-            psi_boundary = self.getFluxLCFS()[blob[0]]
-            psi_0 = self.getFluxAxis()[blob[0]]
+            psi_boundary = -1*self.getCurrentSign() * \
+                           self.getFluxLCFS()[blob[0]]
+            psi_0 = -1*self.getCurrentSign() * \
+                    self.getFluxAxis()[blob[0]]
             
             # If there is more than one time point, we need to expand these
             # arrays to be broadcastable:
