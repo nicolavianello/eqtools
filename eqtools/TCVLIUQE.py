@@ -1055,6 +1055,17 @@ class TCVLIUQETree(EFITTree):
                 raise ValueError('data retrieval failed.')
         return self._tauMHD.copy()
 
+    def getRCentr(self, length_unit=1):
+        """Returns Radius of BCenter measurement
+
+        Returns:
+            R: Radial position where Bcent calculated [m]
+        """
+        if self._RCentr is None:
+            self._RCentr =  0.88/0.996 #Hardcoded from MAI file description of BTF
+            self._defaultUnits['_RCentr'] = 'm'
+        return self._RCentr
+
     # ---  59
     def getMachineCrossSection(self):
         """Pulls TCV cross-section data from tree, converts to plottable
