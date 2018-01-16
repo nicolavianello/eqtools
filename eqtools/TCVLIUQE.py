@@ -1055,6 +1055,27 @@ class TCVLIUQETree(EFITTree):
                 raise ValueError('data retrieval failed.')
         return self._tauMHD.copy()
 
+    def getBCentr(self):
+        """returns Vacuum toroidal magnetic field at center of plasma
+
+        Returns:
+            B_cent (Array): [nt] array of B_t at center [T]
+
+        Raises:
+            ValueError: if module cannot retrieve data from the AUG afs system.
+        """
+
+        if self._BCentr is None:
+            try:
+                bt = MDSplus.Data.execute('TCV_EQ("BZERO")').getValue().data().ravel()
+                btTime = MDSplus.Data.execute('TCV_EQ("BZERO")').getDimensionAt().data()
+                self._BCentr = scipy.interp(self.getTimeBase(),btTime,bt)
+                self._defaultUnits['_btaxv'] = 'T'
+            except (TreeException, AttributeError):
+                raise ValueError('data retrieval failed.')
+
+        return self._BCentr
+
     def getRCentr(self, length_unit=1):
         """Returns Radius of BCenter measurement
 
