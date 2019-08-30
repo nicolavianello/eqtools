@@ -208,7 +208,7 @@ class TCVLIUQEMATTree(EFITTree):
 
         if self._psiRZ is None:
             try:
-                psinode = self._Connection.get.(r'tcv_eq("psi","liuqe.m")')
+                psinode = self._Connection.get(r'tcv_eq("psi","liuqe.m")')
                 self._psiRZ = psinode.data() / (2.*scipy.pi)
                 self._rGrid = psinode.dim_of(0).data()
                 self._zGrid = psinode.dim_of(1).data()
@@ -269,7 +269,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._psiAxis is None:
             try:
-                psiAxisNode = self._Connection.get.(r'tcv_eq("psi_axis","liuqe.m")')
+                psiAxisNode = self._Connection.get(r'tcv_eq("psi_axis","liuqe.m")')
                 self._psiAxis = psiAxisNode.data() / (2.*scipy.pi)
                 self._defaultUnits['_psiAxis'] = str(psiAxisNode.units)
             except TreeException:
