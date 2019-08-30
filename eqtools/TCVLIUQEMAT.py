@@ -145,11 +145,11 @@ class TCVLIUQEMATTree(EFITTree):
             self.server='tcvdata.epfl.ch'
         else:
             self.server='localhost:1600'
-        super(TCVLIUQETree, self).__init__(shot, tree, root,
-                                           length_unit=length_unit,
-                                           gfile=gfile, afile=afile,
-                                           tspline=tspline,
-                                           monotonic=monotonic)
+        super(TCVLIUQEMATTree, self).__init__(shot, tree, root,
+                                              length_unit=length_unit,
+                                              gfile=gfile, afile=afile,
+                                              tspline=tspline,
+                                              monotonic=monotonic, remote=remote)
         # superceed the definition of MDStree
         self._Connection = mds.Connection(self.server)
         self._Connection.openTree(tree, shot)
@@ -1317,7 +1317,7 @@ class TCVLIUQEMATTree(EFITTree):
         fluxPlot.show()
 
 
-class TCVLIUQETreeProp(TCVLIUQETree, PropertyAccessMixin):
+class TCVLIUQEMATTreeProp(TCVLIUQEMATTree, PropertyAccessMixin):
     """TCVLIUQETree with the PropertyAccessMixin added to enable property-style
     access. This is good for interactive use, but may drag the performance down.
     """
