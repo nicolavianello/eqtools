@@ -139,8 +139,7 @@ class TCVLIUQEMATTree(EFITTree):
     def __init__(self, shot, tree='tcv_shot', length_unit='m', gfile='g_eqdsk',
                  afile='a_eqdsk', tspline=False, monotonic=True,
                  remote=False):
-        # this is the root tree where all the LIUQE results are stored
-        root = r'\results'
+        root = None
         if remote is False:
             self.server='tcvdata.epfl.ch'
         else:
@@ -151,8 +150,8 @@ class TCVLIUQEMATTree(EFITTree):
                                               tspline=tspline,
                                               monotonic=monotonic, remote=remote)
         # superceed the definition of MDStree
-        self._Connection = mds.Connection(self.server)
-        self._Connection.openTree(tree, shot)
+        self._MDSTree = mds.Connection(self.server)
+        self._MDSTree.openTree(tree, shot)
     # ---  1
     def getInfo(self):
         """returns namedtuple of shot information
@@ -189,7 +188,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._time is None:
             try:
-                timenode = self._Connection.get(r'tcv_eq("time_psi","liuqe.m")')
+                timenode = self._MDSTree.get(r'tcv_eq("time_psi","liuqe.m")')
                 self._time = timenode.data()
                 self._defaultUnits['_time'] = 's'
             except TreeException:
@@ -208,7 +207,7 @@ class TCVLIUQEMATTree(EFITTree):
 
         if self._psiRZ is None:
             try:
-                psinode = self._Connection.get(r'tcv_eq("psi","liuqe.m")')
+                psinode = self._MDSTree.get(r'tcv_eq("psi","liuqe.m")')
                 self._psiRZ = psinode.data() / (2.*scipy.pi)
                 self._rGrid = psinode.dim_of(0).data()
                 self._zGrid = psinode.dim_of(1).data()
@@ -269,7 +268,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._psiAxis is None:
             try:
-                psiAxisNode = self._Connection.get(r'tcv_eq("psi_axis","liuqe.m")')
+                psiAxisNode = self._MDSTree.get(r'tcv_eq("psi_axis","liuqe.m")')
                 self._psiAxis = psiAxisNode.data() / (2.*scipy.pi)
                 self._defaultUnits['_psiAxis'] = str(psiAxisNode.units)
             except TreeException:
@@ -288,7 +287,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._psiLCFS is None:
             try:
-                psiLCFSNode = self._Connection.get(r'tcv_eq("psi_surf","liuqe.m")')
+                psiLCFSNode = self._MDSTree.get(r'tcv_eq("psi_surf","liuqe.m")')
                 self._psiLCFS = psiLCFSNode.data()/(2*scipy.pi)
                 self._defaultUnits['_psiLCFS'] = 'Wb'
             except TreeException:
@@ -311,7 +310,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._fluxVol is None:
             try:
-                volnode = self._Connection.get(r'tcv_eq("vol","liuqe.m")')
+                volnode = self._MDSTree.get(r'tcv_eq("vol","liuqe.m")')
                 self._fluxVol = volnode.data()
                 # Units aren't properly stored in the tree for this one!
                 self._defaultUnits['_fluxVol'] = 'm^3'
@@ -338,7 +337,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._volLCFS is None:
             try:
-                volLCFSNode = self._Connection.get(r'tcv_eq("vol_edge","liuqe.m")')
+                volLCFSNode = self._MDSTree.get(r'tcv_eq("vol_edge","liuqe.m")')
                 self._volLCFS = volLCFSNode.data()
                 self._defaultUnits['_volLCFS'] = 'm^3'
             except TreeException:
@@ -365,7 +364,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._RmidPsi is None:
             try:
-                RmidPsiNode = self._Connection.get(r'tcv_eq("r_out","liuqe.m")')
+                RmidPsiNode = self._MDSTree.get(r'tcv_eq("r_out","liuqe.m")')
                 self._RmidPsi = RmidPsiNode.data()
                 # Units aren't properly stored in the tree for this one!
                 if RmidPsiNode.units != ' ':
@@ -390,7 +389,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._RLCFS is None:
             try:
-                RLCFSNode = self._Connection.get(r'tcv_eq("r_edge","liuqe.m")')
+                RLCFSNode = self._MDSTree.get(r'tcv_eq("r_edge","liuqe.m")')
                 self._RLCFS = RLCFSNode.data()
                 self._defaultUnits['_RLCFS'] = 'm'
             except TreeException:
@@ -411,7 +410,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._ZLCFS is None:
             try:
-                ZLCFSNode = self._Connection.get(r'tcv_eq("z_edge","liuqe.m")')
+                ZLCFSNode = self._MDSTree.get(r'tcv_eq("z_edge","liuqe.m")')
                 self._ZLCFS = ZLCFSNode.data()
                 self._defaultUnits['_ZLCFS'] = 'm'
             except TreeException:
@@ -433,7 +432,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._fpol is None:
             try:
-                fluxFfnode = self._Connection.get(r'tcv_eq("rbtor_rho","liuqe.m")')
+                fluxFfnode = self._MDSTree.get(r'tcv_eq("rbtor_rho","liuqe.m")')
                 self._fpol = fluxFfnode.data()
                 self._defaultUnits['_fpol'] = 'T*m'
             except TreeException:
@@ -452,7 +451,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._fluxPres is None:
             try:
-                fluxPPresNode = self._Connection(r'tcv_eq("p_rho","liuqe.m")')
+                fluxPPresNode = self._MDSTree(r'tcv_eq("p_rho","liuqe.m")')
                 self._fluxPres = fluxPPresNode.data()
                 self._defaultUnits['_fluxPres'] = 'Pa'
             except TreeException:
@@ -472,7 +471,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._ffprim is None:
             try:
-                fluxFFNode = self._Connection.get(r'tcv_eq("ttprime_rho","liuqe.m")')
+                fluxFFNode = self._MDSTree.get(r'tcv_eq("ttprime_rho","liuqe.m")')
                 self._ffprim = fluxFFnode.data()
                 self._defaultUnits['_ffprim'] = 'T*m^4'
             except TreeException:
@@ -499,7 +498,7 @@ class TCVLIUQEMATTree(EFITTree):
         # But conventionally psi_edge on TCV = 0 -->  phi = psi / psi_axis
         if self._pprime is None:
             try:
-                fluxPPresNode = self._Connection.get(r'tcv_eq("pprime_rho","liuqe.m")')
+                fluxPPresNode = self._MDSTree.get(r'tcv_eq("pprime_rho","liuqe.m")')
                 self._pprime = fluxPPresNode.data()
                 self._defaultUnits['_fluxPres'] = 'Pa/Wb'
             except TreeException:
@@ -518,7 +517,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._kappa is None:
             try:
-                kappaNode = self._Connection.get(r'tcv_eq("kappa_edge","liuqe.m")')
+                kappaNode = self._MDSTree.get(r'tcv_eq("kappa_edge","liuqe.m")')
                 self._kappa = kappaNode.data()
                 self._defaultUnits['_kappa'] = ' '
             except TreeException:
@@ -537,7 +536,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._dupper is None:
             try:
-                dupperNode = self._Connection.get(r'tcv_eq("delta_ed_top","liuqe.m")')
+                dupperNode = self._MDSTree.get(r'tcv_eq("delta_ed_top","liuqe.m")')
                 self._dupper = dupperNode.data()
                 self._defaultUnits['_dupper'] = str(dupperNode.units)
             except TreeException:
@@ -556,7 +555,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._dlower is None:
             try:
-                dlowerNode = self._Connection.get(r'tcv_eq("delta_ed_bot","liuqe.m")')
+                dlowerNode = self._MDSTree.get(r'tcv_eq("delta_ed_bot","liuqe.m")')
                 self._dlower = dlowerNode.data()
                 self._defaultUnits['_dlower'] = str(dlowerNode.units)
             except TreeException:
@@ -575,7 +574,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._rmag is None:
             try:
-                rmagNode = self._Connection.get(r'tcv_eq("r_axis","liuqe.m")')
+                rmagNode = self._MDSTree.get(r'tcv_eq("r_axis","liuqe.m")')
                 self._rmag = rmagNode.data()
                 self._defaultUnits['_rmag'] = 'm'
             except (TreeException, AttributeError):
@@ -596,7 +595,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._zmag is None:
             try:
-                zmagNode = self._Connection.get(r'tcv_eq("z_axis","liuqe.m")')
+                zmagNode = self._MDSTree.get(r'tcv_eq("z_axis","liuqe.m")')
                 self._zmag = zmagNode.data()
                 self._defaultUnits['_zmag'] = 'm'
             except TreeException:
@@ -621,7 +620,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._areaLCFS is None:
             try:
-                areaLCFSNode = self._Connection.get(r'tcv_eq("area_edge","liuqe.m")')
+                areaLCFSNode = self._MDSTree.get(r'tcv_eq("area_edge","liuqe.m")')
                 self._areaLCFS = areaLCFSNode.data()
                 self._defaultUnits['_areaLCFS'] = 'm^2'
             except TreeException:
@@ -653,7 +652,7 @@ class TCVLIUQEMATTree(EFITTree):
         # defin a simple way to fin the closest index to zero
         if self._aLCFS is None:
             try:
-                _dummy = self._Connection.get(r'tcv_eq("r_out_mid","liuqe.m")')
+                _dummy = self._MDSTree.get(r'tcv_eq("r_out_mid","liuqe.m")')
                 # remember that it is the minor Radius and
                 # getRmidPsi() give the absolute value
                 RMaj = 0.88/0.996
@@ -708,7 +707,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._qpsi is None:
             try:
-                qpsiNode = self._Connection.get(r'tcv_eq("q","liuqe.m")')
+                qpsiNode = self._MDSTree.get(r'tcv_eq("q","liuqe.m")')
                 self._qpsi = qpsiNode.data()
                 self._defaultUnits['_qpsi'] = str(qpsiNode.units)
             except TreeException:
@@ -727,7 +726,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._q0 is None:
             try:
-                q0Node = self._Connection.get(r'tcv_eq("q_axis","liuqe.m")')
+                q0Node = self._MDSTree.get(r'tcv_eq("q_axis","liuqe.m")')
                 self._q0 = q0Node.data()
                 self._defaultUnits['_q0'] = str(q0Node.units)
             except (TreeException, AttributeError):
@@ -746,7 +745,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._q95 is None:
             try:
-                q95Node = self._Connection.get(r'tcv_eq("q_95","liuqe.m")')
+                q95Node = self._MDSTree.get(r'tcv_eq("q_95","liuqe.m")')
                 self._q95 = q95Node.data()
                 self._defaultUnits['_q95'] = str(q95Node.units)
             except (TreeException, AttributeError):
@@ -765,7 +764,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._qLCFS is None:
             try:
-                qLCFSNode = self._Connection.get(r'tcv_eq("q_edge","liuqe.m")')
+                qLCFSNode = self._MDSTree.get(r'tcv_eq("q_edge","liuqe.m")')
                 self._qLCFS = qLCFSNode.data()
                 self._defaultUnits['_qLCFS'] = str(qLCFSNode.units)
             except (TreeException, AttributeError):
@@ -884,8 +883,8 @@ class TCVLIUQEMATTree(EFITTree):
         if self._btaxv is None:
             try:
                 RMaj = 0.88/0.996
-                bt = self._Connection.get('tcv_eq("BZERO")').data()/RMaj
-                btTime = self._Connection.get('dim_of(tcv_eq("BZERO"))').data()
+                bt = self._MDSTree.get('tcv_eq("BZERO")').data()/RMaj
+                btTime = self._MDSTree.get('dim_of(tcv_eq("BZERO"))').data()
                 self._btaxv = scipy.interp(self.getTimeBase(), btTime, bt)
                 self._defaultUnits['_btaxv'] = 'T'
             except (TreeException, AttributeError):
@@ -924,7 +923,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._IpCalc is None:
             try:
-                IpCalcNode = self._Connection.get('tcv_eq("i_p","liuqe.m")')
+                IpCalcNode = self._MDSTree.get('tcv_eq("i_p","liuqe.m")')
                 self._IpCalc = IpCalcNode.data()
                 self._defaultUnits['_IpCalc'] = str(IpCalcNode.units)
             except (TreeException,AttributeError):
@@ -948,9 +947,9 @@ class TCVLIUQEMATTree(EFITTree):
                 # ip = conn.get('tcv_ip()').data()
                 # ipTime = conn.get('dim_of(tcv_ip())').data()
                 # conn.closeTree(self._tree, self._shot)
-                ipNode = self._Connection.get(r'\magnetics::iplasma:trapeze')
+                ipNode = self._MDSTree.get(r'\magnetics::iplasma:trapeze')
                 ip = ipNode.data()
-                ipTime = self._Connection.get(r'dim_of(\magnetics::iplasma:trapeze)').data()
+                ipTime = self._MDSTree.get(r'dim_of(\magnetics::iplasma:trapeze)').data()
                 self._IpMeas = scipy.interp(self.getTimeBase(), ipTime, ip)
                 self._defaultUnits['_IpMeas'] = 'A'
             except (TreeException, AttributeError):
@@ -969,7 +968,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._betat is None:
             try:
-                betatNode = self._Connection.get('tcv_eq("beta_tor","liuqe.m")')
+                betatNode = self._MDSTree.get('tcv_eq("beta_tor","liuqe.m")')
                 self._betat = betatNode.data()
                 self._defaultUnits['_betat'] = str(betatNode.units)
             except (TreeException, AttributeError):
@@ -988,7 +987,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._betap is None:
             try:
-                betapNode = self._Connection.get('tcv_eq("beta_pol","liuqe.m")')
+                betapNode = self._MDSTree.get('tcv_eq("beta_pol","liuqe.m")')
                 self._betap = betapNode.data()
                 self._defaultUnits['_betap'] = str(betapNode.units)
             except (TreeException, AttributeError):
@@ -1007,7 +1006,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._Li is None:
             try:
-                LiNode = self._Connection.get('tcv_eq("l_i_3","liuqe.m")')
+                LiNode = self._MDSTree.get('tcv_eq("l_i_3","liuqe.m")')
 
                 self._Li = LiNode.data()
                 self._defaultUnits['_Li'] = str(LiNode.units)
@@ -1137,8 +1136,8 @@ class TCVLIUQEMATTree(EFITTree):
         """
         # pull cross-section from tree
         try:
-            self._Rlimiter = self._Connection.get('static("r_t")').data()
-            self._Zlimiter = self._Connection.get('static("z_t")').data()
+            self._Rlimiter = self._MDSTree.get('static("r_t")').data()
+            self._Zlimiter = self._MDSTree.get('static("z_t")').data()
         except MDSplus._treeshr.TreeException:
             raise ValueError('data load failed.')
 
@@ -1158,10 +1157,10 @@ class TCVLIUQEMATTree(EFITTree):
         """
         # pull cross-section from tree
         try:
-            Rv_in = self._Connection.get('static("r_v:in")').data()
-            Rv_out = self._Connection.get('static("r_v:out")').data()
-            Zv_in = self._Connection.get('static("z_v:in")').data()
-            Zv_out = self._Connection.get('static("z_v:out")').data()
+            Rv_in = self._MDSTree.get('static("r_v:in")').data()
+            Rv_out = self._MDSTree.get('static("r_v:out")').data()
+            Zv_in = self._MDSTree.get('static("z_v:in")').data()
+            Zv_out = self._MDSTree.get('static("z_v:out")').data()
         except MDSplus._treeshr.TreeException:
             raise ValueError('data load failed.')
 

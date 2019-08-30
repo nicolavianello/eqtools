@@ -109,7 +109,7 @@ class EFITTree(Equilibrium):
             safer method).
     """
     def __init__(self, shot, tree, root, length_unit='m', gfile = 'g_eqdsk', 
-                 afile='a_eqdsk', tspline=False, monotonic=True, remote =False):
+                 afile='a_eqdsk', tspline=False, monotonic=True, remote=False):
         if not _has_MDS:
             print("MDSplus module did not load properly. Exception is below:")
             print(_e_MDS.__class__)
