@@ -71,16 +71,16 @@ except Exception:
 # for how to compute the contours without calling matplotlib contours
 
 
-def greenArea(vs):
-    a = 0
-    x0, y0 = vs[0]
-    for [x1, y1] in vs[1:]:
-        dx = x1-x0
-        dy = y1-y0
-        a += 0.5*(y0*dx - x0*dy)
-        x0 = x1
-        y0 = y1
-    return a
+# def greenArea(vs):
+#     a = 0
+#     x0, y0 = vs[0]
+#     for [x1, y1] in vs[1:]:
+#         dx = x1-x0
+#         dy = y1-y0
+#         a += 0.5*(y0*dx - x0*dy)
+#         x0 = x1
+#         y0 = y1
+#     return a
 
 
 class TCVLIUQEMATTree(EFITTree):
@@ -152,7 +152,7 @@ class TCVLIUQEMATTree(EFITTree):
                                            monotonic=monotonic)
         # superceed the definition of MDStree
         self._Connection = mds.Connection(self.server)
-        self._Connection.openTree(tree)
+        self._Connection.openTree(tree, shot)
     # ---  1
     def getInfo(self):
         """returns namedtuple of shot information
@@ -657,7 +657,7 @@ class TCVLIUQEMATTree(EFITTree):
                 # remember that it is the minor Radius and
                 # getRmidPsi() give the absolute value
                 RMaj = 0.88/0.996
-                self._aLCFS = _dummy.data()[:, _dummy.shape[1] - 1] - RMaj
+                self._aLCFS = _dummy.data()[:, _dummy.data().shape[1] - 1] - RMaj
                 self._defaultUnits['_aLCFS']='m'
             except TreeException:
                 raise ValueError('data retrieval failed.')
@@ -708,7 +708,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._qpsi is None:
             try:
-                qpsiNode = self._MDSTree.getNode(self._root+'::q_psi')
+                qpsiNode = self._Connection.get(r'tcv_eq("q","liuqe.m")')
                 self._qpsi = qpsiNode.data()
                 self._defaultUnits['_qpsi'] = str(qpsiNode.units)
             except TreeException:
@@ -727,7 +727,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._q0 is None:
             try:
-                q0Node = self._MDSTree.getNode(self._root+'::q_zero')
+                q0Node = self._Connection.get(r'tcv_eq("q_axis","liuqe.m")')
                 self._q0 = q0Node.data()
                 self._defaultUnits['_q0'] = str(q0Node.units)
             except (TreeException, AttributeError):
@@ -746,7 +746,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._q95 is None:
             try:
-                q95Node = self._MDSTree.getNode(self._root+'::q_95')
+                q95Node = self._Connection.get(r'tcv_eq("q_95","liuqe.m")')
                 self._q95 = q95Node.data()
                 self._defaultUnits['_q95'] = str(q95Node.units)
             except (TreeException, AttributeError):
@@ -765,12 +765,110 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._qLCFS is None:
             try:
-                qLCFSNode = self._MDSTree.getNode(self._root+'::q_edge')
+                qLCFSNode = self._Connection.get(r'tcv_eq("q_edge","liuqe.m")')
                 self._qLCFS = qLCFSNode.data()
                 self._defaultUnits['_qLCFS'] = str(qLCFSNode.units)
             except (TreeException, AttributeError):
                 raise ValueError('data retrieval failed.')
         return self._qLCFS.copy()
+
+    # ---  31
+    def getQ1Surf(self, length_unit=1):
+        """returns outboard-midplane minor radius of q=1 surface.
+
+        Keyword Args:
+            length_unit (String or 1): unit for minor radius.  Defaults to 1,
+                denoting default length unit (typically m).
+
+        Returns:
+            qr1 (Array): [nt] array of minor radius of q=1 surface.
+
+        Raises:
+            ValueError: if module cannot retrieve data from MDS tree.
+        """
+        raise NotImplementedError()
+        # if self._rq1 is None:
+        #     try:
+        #         rq1Node = self._MDSTree.getNode(self._root + self._afile + ':aaq1')
+        #         self._rq1 = rq1Node.data()
+        #         self._defaultUnits['_rq1'] = str(rq1Node.units)
+        #     except (TreeException, AttributeError):
+        #         raise ValueError('data retrieval failed.')
+        # unit_factor = self._getLengthConversionFactor(self._defaultUnits['_rq1'], length_unit)
+        # return unit_factor * self._rq1.copy()
+
+    # ---  32
+    def getQ2Surf(self, length_unit=1):
+        """returns outboard-midplane minor radius of q=2 surface.
+
+        Keyword Args:
+            length_unit (String or 1): unit for minor radius.  Defaults to 1,
+                denoting default length unit (typically m).
+
+        Returns:
+            qr2 (Array): [nt] array of minor radius of q=2 surface.
+
+        Raises:
+            ValueError: if module cannot retrieve data from MDS tree.
+        """
+        raise NotImplementedError()
+        # if self._rq2 is None:
+        #     try:
+        #         rq2Node = self._MDSTree.getNode(self._root + self._afile + ':aaq2')
+        #         self._rq2 = rq2Node.data()
+        #         self._defaultUnits['_rq2'] = str(rq2Node.units)
+        #     except (TreeException, AttributeError):
+        #         raise ValueError('data retrieval failed.')
+        # unit_factor = self._getLengthConversionFactor(self._defaultUnits['_rq2'], length_unit)
+        # return unit_factor * self._rq2.copy()
+
+    # ---  33
+    def getQ3Surf(self, length_unit=1):
+        """returns outboard-midplane minor radius of q=3 surface.
+
+        Keyword Args:
+            length_unit (String or 1): unit for minor radius.  Defaults to 1,
+                denoting default length unit (typically m).
+
+        Returns:
+            qr3 (Array): [nt] array of minor radius of q=3 surface.
+
+        Raises:
+            ValueError: if module cannot retrieve data from MDS tree.
+        """
+        raise NotImplementedError()
+        # if self._rq3 is None:
+        #     try:
+        #         rq3Node = self._MDSTree.getNode(self._root + self._afile + ':aaq3')
+        #         self._rq3 = rq3Node.data()
+        #         self._defaultUnits['_rq3'] = str(rq3Node.units)
+        #     except (TreeException, AttributeError):
+        #         raise ValueError('data retrieval failed.')
+        # unit_factor = self._getLengthConversionFactor(self._defaultUnits['_rq3'], length_unit)
+        # return unit_factor * self._rq3.copy()
+
+    # ---  34
+    def getQs(self, length_unit=1):
+        """pulls q values.
+
+        Returns:
+            namedtuple containing (q0,q95,qLCFS,rq1,rq2,rq3).
+
+        Raises:
+            ValueError: if module cannot retrieve data from MDS tree.
+        """
+        raise NotImplementedError()
+        # try:
+        #     q0 = self.getQ0()
+        #     q95 = self.getQ95()
+        #     qLCFS = self.getQLCFS()
+        #     rq1 = self.getQ1Surf(length_unit=length_unit)
+        #     rq2 = self.getQ2Surf(length_unit=length_unit)
+        #     rq3 = self.getQ3Surf(length_unit=length_unit)
+        #     data = namedtuple('Qs', ['q0', 'q95', 'qLCFS', 'rq1', 'rq2', 'rq3'])
+        #     return data(q0=q0, q95=q95, qLCFS=qLCFS, rq1=rq1, rq2=rq2, rq3=rq3)
+        # except ValueError:
+        #     raise ValueError('data retrieval failed.')
 
     # ---  35
     def getBtVac(self):
@@ -785,20 +883,9 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._btaxv is None:
             try:
-                # constant is due to a detailed measurements on
-                # the vacuum vessel major radius
-                # introduce to be consistent with TDI function tcv_eq.fun
-                # almost 0.88 m
                 RMaj = 0.88/0.996
-                btTree = self._MDSTree.getNode(r'\magnetics::iphi')
-                bt = btTree.data().ravel()*19.2e-6/RMaj
-                btTime = btTree.getDimensionAt().data()
-                # conn = MDSplus.Connection(self.server)
-                # conn.openTree('tcv_shot', self._shot)
-                # bt = conn.get('tcv_eq("BZERO")').data()[0]/RMaj
-                # btTime = conn.get('dim_of(tcv_eq("BZERO"))').data()
-                # conn.closeTree(self._tree, self._shot)
-                # we need to interpolate on the time basis of LIUQE
+                bt = self._Connection.get('tcv_eq("BZERO")').data()/RMaj
+                btTime = self._Connection.get('dim_of(tcv_eq("BZERO"))').data()
                 self._btaxv = scipy.interp(self.getTimeBase(), btTime, bt)
                 self._defaultUnits['_btaxv'] = 'T'
             except (TreeException, AttributeError):
@@ -837,7 +924,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._IpCalc is None:
             try:
-                IpCalcNode = self._MDSTree.getNode(self._root + '::i_p')
+                IpCalcNode = self._Connection.get('tcv_eq("i_p","liuqe.m")')
                 self._IpCalc = IpCalcNode.data()
                 self._defaultUnits['_IpCalc'] = str(IpCalcNode.units)
             except (TreeException,AttributeError):
@@ -861,9 +948,9 @@ class TCVLIUQEMATTree(EFITTree):
                 # ip = conn.get('tcv_ip()').data()
                 # ipTime = conn.get('dim_of(tcv_ip())').data()
                 # conn.closeTree(self._tree, self._shot)
-                ipNode = self._MDSTree.getNode(r'\magnetics::iplasma:trapeze')
+                ipNode = self._Connection.get(r'\magnetics::iplasma:trapeze')
                 ip = ipNode.data()
-                ipTime = ipNode.getDimensionAt().data()
+                ipTime = self._Connection.get(r'dim_of(\magnetics::iplasma:trapeze)').data()
                 self._IpMeas = scipy.interp(self.getTimeBase(), ipTime, ip)
                 self._defaultUnits['_IpMeas'] = 'A'
             except (TreeException, AttributeError):
@@ -882,7 +969,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._betat is None:
             try:
-                betatNode = self._MDSTree.getNode(self._root+'::beta_tor')
+                betatNode = self._Connection.get('tcv_eq("beta_tor","liuqe.m")')
                 self._betat = betatNode.data()
                 self._defaultUnits['_betat'] = str(betatNode.units)
             except (TreeException, AttributeError):
@@ -901,14 +988,13 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._betap is None:
             try:
-                betapNode = self._MDSTree.getNode(self._root+'::beta_pol')
+                betapNode = self._Connection.get('tcv_eq("beta_pol","liuqe.m")')
                 self._betap = betapNode.data()
                 self._defaultUnits['_betap'] = str(betapNode.units)
             except (TreeException, AttributeError):
                 raise ValueError('data retrieval failed.')
         return self._betap.copy()
-    
-        
+
     # ---  44
     def getLi(self):
         """returns LIUQE-calculated internal inductance.
@@ -921,50 +1007,89 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._Li is None:
             try:
-                LiNode = self._MDSTree.getNode(self._root+'::l_i')
+                LiNode = self._Connection.get('tcv_eq("l_i_3","liuqe.m")')
+
                 self._Li = LiNode.data()
                 self._defaultUnits['_Li'] = str(LiNode.units)
             except (TreeException, AttributeError):
                 raise ValueError('data retrieval failed.')
         return self._Li.copy()
-    
-    # ---  50
-    def getDiamagWp(self):
-        """returns diamagnetic-loop plasma stored energy.
+
+    # ---  45
+    def getBetas(self):
+        """pulls calculated betap, betat, internal inductance
 
         Returns:
-            Wp (Array): [nt] array of measured plasma stored energy.
+            namedtuple containing (betat,betap,Li)
 
         Raises:
             ValueError: if module cannot retrieve data from MDS tree.
         """
-        if self._WDiamag is None:
-            try:
-                WDiamagNode = self._MDSTree.getNode(self._root+'::total_energy')
-                self._WDiamag = WDiamagNode.data()
-                self._defaultUnits['_WDiamag'] = str(WDiamagNode.units)
-            except (TreeException, AttributeError):
-                raise ValueError('data retrieval failed.')
-        return self._WDiamag.copy()
+        try:
+            betat = self.getBetaT()
+            betap = self.getBetaP()
+            Li = self.getLi()
+            data = namedtuple('Betas', ['betat', 'betap', 'Li'])
+            return data(betat=betat, betap=betap, Li=Li)
+        except ValueError:
+            raise ValueError('data retrieval failed.')
+
+    # ---  50
+    # def getDiamagWp(self):
+    #     """returns diamagnetic-loop plasma stored energy.
+    #
+    #     Returns:
+    #         Wp (Array): [nt] array of measured plasma stored energy.
+    #
+    #     Raises:
+    #         ValueError: if module cannot retrieve data from MDS tree.
+    #     """
+    #     if self._WDiamag is None:
+    #         try:
+    #             WDiamagNode = self._MDSTree.getNode(self._root+'::total_energy')
+    #             self._WDiamag = WDiamagNode.data()
+    #             self._defaultUnits['_WDiamag'] = str(WDiamagNode.units)
+    #         except (TreeException, AttributeError):
+    #             raise ValueError('data retrieval failed.')
+    #     return self._WDiamag.copy()
 
     # ---  53
-    def getTauMHD(self):
-        """returns LIUQE-calculated MHD energy confinement time.
+    def getWMHD(self):
+        """returns EFIT-calculated MHD stored energy.
 
         Returns:
-            tauMHD (Array): [nt] array of LIUQE-calculated energy confinement time.
+            WMHD (Array): [nt] array of EFIT-calculated stored energy.
 
         Raises:
             ValueError: if module cannot retrieve data from MDS tree.
         """
-        if self._tauMHD is None:
+        if self._WMHD is None:
             try:
-                tauMHDNode = self._MDSTree.getNode(self._root+'::tau_e')
-                self._tauMHD = tauMHDNode.data()
-                self._defaultUnits['_tauMHD'] = str(tauMHDNode.units)
+                WMHDNode = elf._Connection.get('tcv_eq("w_mhd","liuqe.m")')
+                self._WMHD = WMHDNode.data()
+                self._defaultUnits['_WMHD'] = str(WMHDNode.units)
             except (TreeException, AttributeError):
                 raise ValueError('data retrieval failed.')
-        return self._tauMHD.copy()
+        return self._WMHD.copy()
+
+    # ---  53
+    # def getTauMHD(self):
+    #     """returns LIUQE-calculated MHD energy confinement time.
+    #
+    #     Returns:
+    #         tauMHD (Array): [nt] array of LIUQE-calculated energy confinement time.
+    #
+    #     Raises:
+    #         ValueError: if module cannot retrieve data from MDS tree.
+    #     """
+    #     if self._tauMHD is None:
+    #         try:
+    #             tauMHDNode = self._MDSTree.getNode(self._root+'::tau_e')
+    #             self._tauMHD = tauMHDNode.data()
+    #             self._defaultUnits['_tauMHD'] = str(tauMHDNode.units)
+    #         except (TreeException, AttributeError):
+    #             raise ValueError('data retrieval failed.')
+    #     return self._tauMHD.copy()
 
     def getBCentr(self):
         """returns Vacuum toroidal magnetic field at center of plasma
@@ -978,9 +1103,7 @@ class TCVLIUQEMATTree(EFITTree):
 
         if self._BCentr is None:
             try:
-                bt = MDSplus.Data.execute('TCV_EQ("BZERO")').getValue().data().ravel()
-                btTime = MDSplus.Data.execute('TCV_EQ("BZERO")').getDimensionAt().data()
-                self._BCentr = scipy.interp(self.getTimeBase(),btTime,bt)
+                self._BCentr = self.getBtVac() * self.getRCentr()
                 self._defaultUnits['_btaxv'] = 'T'
             except (TreeException, AttributeError):
                 raise ValueError('data retrieval failed.')
@@ -1014,8 +1137,8 @@ class TCVLIUQEMATTree(EFITTree):
         """
         # pull cross-section from tree
         try:
-            self._Rlimiter = MDSplus.Data.execute('static("r_t")').getValue().data()
-            self._Zlimiter = MDSplus.Data.execute('static("z_t")').getValue().data()
+            self._Rlimiter = self._Connection.get('static("r_t")').data()
+            self._Zlimiter = self._Connection.get('static("z_t")').data()
         except MDSplus._treeshr.TreeException:
             raise ValueError('data load failed.')
 
@@ -1035,10 +1158,10 @@ class TCVLIUQEMATTree(EFITTree):
         """
         # pull cross-section from tree
         try:
-            Rv_in = MDSplus.Data.execute('static("r_v:in")').getValue().data()
-            Rv_out = MDSplus.Data.execute('static("r_v:out")').getValue().data()
-            Zv_in = MDSplus.Data.execute('static("z_v:in")').getValue().data()
-            Zv_out = MDSplus.Data.execute('static("z_v:out")').getValue().data()
+            Rv_in = self._Connection.get('static("r_v:in")').data()
+            Rv_out = self._Connection.get('static("r_v:out")').data()
+            Zv_in = self._Connection.get('static("z_v:in")').data()
+            Zv_out = self._Connection.get('static("z_v:out")').data()
         except MDSplus._treeshr.TreeException:
             raise ValueError('data load failed.')
 
