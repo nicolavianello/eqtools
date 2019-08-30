@@ -189,7 +189,7 @@ class TCVLIUQEMATTree(EFITTree):
         """
         if self._time is None:
             try:
-                timenode = self._Connection.get.(r'tcv_eq("time_psi","liuqe.m")')
+                timenode = self._Connection.get(r'tcv_eq("time_psi","liuqe.m")')
                 self._time = timenode.data()
                 self._defaultUnits['_time'] = 's'
             except TreeException:
