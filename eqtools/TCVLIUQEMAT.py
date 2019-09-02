@@ -28,6 +28,7 @@ from collections import namedtuple
 from .EFIT import EFITTree
 from .core import PropertyAccessMixin, ModuleWarning, Equilibrium
 import warnings
+import numpy as np
 
 try:
     import MDSplus
@@ -137,12 +138,13 @@ class TCVLIUQEMATTree(Equilibrium):
 
         super(TCVLIUQEMATTree, self).__init__(length_unit=length_unit,
                                               tspline=tspline,
-                                              monotonic=monotonic, server=server)
+                                              monotonic=monotonic)
 
         # superceed the definition of MDStree
         self.server = server
-        self._MDSTree = mds.Connection(self.server)
+        self._MDSTree = MDSplus.Connection(self.server)
         self._MDSTree.openTree(tree, shot)
+        self._defaultUnits = {}
         # now we need to define a None all the variables which will be initialized afterwards through
         # different methods
         # grad-shafranov related parameters
@@ -204,7 +206,7 @@ class TCVLIUQEMATTree(Equilibrium):
 
         # energy calculations
         self._WMHD = None  # calc stored energy (t)
-        self._tauMHD = None  # calc energy confinement time (t)
+        self._tauMHD = None  # calc energy confinement time (t)ps
         self._Pinj = None  # calc injected power (t)
         self._Wbdot = None  # d/dt magnetic stored energy (t)
         self._Wpdot = None  # d/dt plasma stored energy (t)
@@ -221,7 +223,7 @@ class TCVLIUQEMATTree(Equilibrium):
         self._volLCFS = None  # volume within LCFS (t)
         self._qpsi = None  # q profile (psi,t)
         self._RmidPsi = None  # max major radius of flux surface (t,psi)
-
+        self.getTimeBase()
     # ---  1
     def getInfo(self):
         """returns namedtuple of shot information
@@ -278,7 +280,7 @@ class TCVLIUQEMATTree(Equilibrium):
         if self._psiRZ is None:
             try:
                 psinode = self._MDSTree.get(r'tcv_eq("psi","liuqe.m")')
-                self._psiRZ = psinode.data() / (2.*scipy.pi)
+                self._psiRZ = psinode.data()  / (2.*scipy.pi)
                 self._rGrid = psinode.dim_of(0).data()
                 self._zGrid = psinode.dim_of(1).data()
                 self._defaultUnits['_psiRZ'] = str(psinode.units)
@@ -347,7 +349,8 @@ class TCVLIUQEMATTree(Equilibrium):
 
     # ---  7
     def getFluxLCFS(self):
-        """returns psi at separatrix.
+        """returns psi at separatrix. Remember that for LIUQE.M the psi is saved as
+        flux - flux(LCFS) so that the flux at the LCFS should be identically zero
 
         Returns:
             psiLCFS (Array): [nt] array of psi at LCFS.
@@ -357,8 +360,10 @@ class TCVLIUQEMATTree(Equilibrium):
         """
         if self._psiLCFS is None:
             try:
-                psiLCFSNode = self._MDSTree.get(r'tcv_eq("psi_surf","liuqe.m")')
-                self._psiLCFS = psiLCFSNode.data()/(2*scipy.pi)
+                self._psiLCFS = np.zeros(self._time.size)
+            # try:
+            #     psiLCFSNode = self._MDSTree.get(r'tcv_eq("psi_surf","liuqe.m")')
+            #     self._psiLCFS = psiLCFSNode.data()/(2*scipy.pi)
                 self._defaultUnits['_psiLCFS'] = 'Wb'
             except TreeException:
                 raise ValueError('data retrieval failed.')
