@@ -83,10 +83,12 @@ except Exception:
 #     return a
 
 
-class TCVLIUQEMATTree(EFITTree):
-    """Inherits :py:class:`eqtools.EFIT.EFITTree` class. Machine-specific data
-    handling class for TCV Machine. Pulls LIUQUE data from selected MDS tree
-    and shot, stores as object attributes eventually transforming it in the
+class TCVLIUQEMATTree(Equilibrium):
+    """Inherits :py:class:`eqtools.Equilibrium` class. Machine-specific data
+    handling class for TCV Machine. Pulls LIUQUE Matlab version
+    data from selected MDS tree
+    and shot through tcv_eq TDI funcion,
+    stores as object attributes eventually transforming it in the
     equivalent quantity for EFIT. Each  variable or set of
     variables is recovered with a corresponding getter method. Essential data
     for LIUQUE mapping are pulled on initialization (e.g. psirz grid).
@@ -100,8 +102,6 @@ class TCVLIUQEMATTree(EFITTree):
     Args:
         shot (integer): TCV shot index.
     Keyword Args:
-        tree (string): Optional input for LIUQE tree, defaults to 'RESULTS'
-            (i.e., LIUQE data are under \\results::).
         length_unit (string): Sets the base unit used for any quantity whose
             dimensions are length to any power. Valid options are:
                 
@@ -119,12 +119,6 @@ class TCVLIUQEMATTree(EFITTree):
                 ===========  ===========================================================================================
                 
             Default is 'm' (all units taken and returned in meters).
-        gfile (string): Optional input for EFIT geqdsk location name,
-            defaults to 'g_eqdsk' (i.e., EFIT data are under
-            \\tree::top.results.G_EQDSK)
-        afile (string): Optional input for EFIT aeqdsk location name,
-            defaults to 'a_eqdsk' (i.e., EFIT data are under
-            \\tree::top.results.A_EQDSK)
         tspline (Boolean): Sets whether or not interpolation in time is
             performed using a tricubic spline or nearest-neighbor
             interpolation. Tricubic spline interpolation requires at least
@@ -135,23 +129,99 @@ class TCVLIUQEMATTree(EFITTree):
         monotonic (Boolean): Sets whether or not the "monotonic" form of time
             window finding is used. If True, the timebase must be monotonically
             increasing. Default is False (use slower, safer method).
+        remote (Strig): String indicating the MDSplus server to connect to. Eventually this implies
+            the module can be used through MDSplus tunneling
     """
-    def __init__(self, shot, tree='tcv_shot', length_unit='m', gfile='g_eqdsk',
-                 afile='a_eqdsk', tspline=False, monotonic=True,
-                 remote=False):
-        root = None
-        if remote is False:
-            self.server='tcvdata.epfl.ch'
-        else:
-            self.server='localhost:1600'
-        super(TCVLIUQEMATTree, self).__init__(shot, tree, root,
-                                              length_unit=length_unit,
-                                              gfile=gfile, afile=afile,
+    def __init__(self, shot, tree='tcv_shot', length_unit='m', tspline=False, monotonic=True,
+                 server='tcvdata.epfl.ch'):
+
+        super(TCVLIUQEMATTree, self).__init__(length_unit=length_unit,
                                               tspline=tspline,
-                                              monotonic=monotonic, remote=remote)
+                                              monotonic=monotonic, server=server)
+
         # superceed the definition of MDStree
+        self.server = server
         self._MDSTree = mds.Connection(self.server)
         self._MDSTree.openTree(tree, shot)
+        # now we need to define a None all the variables which will be initialized afterwards through
+        # different methods
+        # grad-shafranov related parameters
+        self._fpol = None
+        self._fluxPres = None  # pressure on flux surface (psi,t)
+        self._ffprim = None
+        self._pprime = None  # pressure derivative on flux surface (t,psi)
+
+        # fields
+        self._btaxp = None  # Bt on-axis, with plasma (t)
+        self._btaxv = None  # Bt on-axis, vacuum (t)
+        self._bpolav = None  # avg poloidal field (t)
+        self._BCentr = None  # Bt at RCentr, vacuum (for gfiles) (t)
+
+        # plasma current
+        self._IpCalc = None  # calculated plasma current (t)
+        self._IpMeas = None  # measured plasma current (t)
+        self._Jp = None  # grid of current density (r,z,t)
+        self._currentSign = None  # sign of current for entire shot (calculated in moderately kludgey manner)
+
+        # safety factor parameters
+        self._q0 = None  # q on-axis (t)
+        self._q95 = None  # q at 95% flux (t)
+        self._qLCFS = None  # q at LCFS (t)
+        self._rq1 = None  # outboard-midplane minor radius of q=1 surface (t)
+        self._rq2 = None  # outboard-midplane minor radius of q=2 surface (t)
+        self._rq3 = None  # outboard-midplane minor radius of q=3 surface (t)
+
+        # shaping parameters
+        self._kappa = None  # LCFS elongation (t)
+        self._dupper = None  # LCFS upper triangularity (t)
+        self._dlower = None  # LCFS lower triangularity (t)
+
+        # (dimensional) geometry parameters
+        self._rmag = None  # major radius, magnetic axis (t)
+        self._zmag = None  # Z magnetic axis (t)
+        self._aLCFS = None  # outboard-midplane minor radius (t)
+        self._RmidLCFS = None  # outboard-midplane major radius (t)
+        self._areaLCFS = None  # LCFS surface area (t)
+        self._RLCFS = None  # R-positions of LCFS (t,n)
+        self._ZLCFS = None  # Z-positions of LCFS (t,n)
+        self._RCentr = None  # Radius for BCentr calculation (for gfiles) (t)
+
+        # machine geometry parameters
+        self._Rlimiter = None  # R-positions of vacuum-vessel wall (t)
+        self._Zlimiter = None  # Z-positions of vacuum-vessel wall (t)
+
+        # calc. normalized-pressure values
+        self._betat = None  # calc toroidal beta (t)
+        self._betap = None  # calc avg. poloidal beta (t)
+        self._Li = None  # calc internal inductance (t)
+
+        # diamagnetic measurements
+        self._diamag = None  # diamagnetic flux (t)
+        self._betatd = None  # diamagnetic toroidal beta (t)
+        self._betapd = None  # diamagnetic poloidal beta (t)
+        self._WDiamag = None  # diamagnetic stored energy (t)
+        self._tauDiamag = None  # diamagnetic energy confinement time (t)
+
+        # energy calculations
+        self._WMHD = None  # calc stored energy (t)
+        self._tauMHD = None  # calc energy confinement time (t)
+        self._Pinj = None  # calc injected power (t)
+        self._Wbdot = None  # d/dt magnetic stored energy (t)
+        self._Wpdot = None  # d/dt plasma stored energy (t)
+
+        # load essential mapping data
+        # Set the variables to None first so the loading calls will work right:
+        self._time = None  # timebase
+        self._psiRZ = None  # flux grid (r,z,t)
+        self._rGrid = None  # R-axis (t)
+        self._zGrid = None  # Z-axis (t)
+        self._psiLCFS = None  # flux at LCFS (t)
+        self._psiAxis = None  # flux at magnetic axis (t)
+        self._fluxVol = None  # volume within flux surface (t,psi)
+        self._volLCFS = None  # volume within LCFS (t)
+        self._qpsi = None  # q profile (psi,t)
+        self._RmidPsi = None  # max major radius of flux surface (t,psi)
+
     # ---  1
     def getInfo(self):
         """returns namedtuple of shot information
