@@ -224,6 +224,7 @@ class TCVLIUQEMATTree(Equilibrium):
         self._qpsi = None  # q profile (psi,t)
         self._RmidPsi = None  # max major radius of flux surface (t,psi)
         self.getTimeBase()
+        self.getFluxGrid()
     # ---  1
     def getInfo(self):
         """returns namedtuple of shot information
@@ -281,8 +282,8 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 psinode = self._MDSTree.get(r'tcv_eq("psi","liuqe.m")')
                 self._psiRZ = psinode.data()  / (2.*scipy.pi)
-                self._rGrid = psinode.dim_of(0).data()
-                self._zGrid = psinode.dim_of(1).data()
+                self._rGrid = self._MDSTree.get(r'dim_of(tcv_eq("psi","liuqe.m"),0)').data()
+                self._zGrid = self._MDSTree.get(r'dim_of(tcv_eq("psi","liuqe.m"),1)').data()
                 self._defaultUnits['_psiRZ'] = str(psinode.units)
                 self._defaultUnits['_rGrid'] = 'm'
                 self._defaultUnits['_zGrid'] = 'm'
@@ -1389,6 +1390,17 @@ class TCVLIUQEMATTree(Equilibrium):
 
         plt.ion()
         fluxPlot.show()
+
+    def getCurrentSign(self):
+        """Returns the sign of the current, based on the check in Steve Wolfe's
+        IDL implementation efit_rz2psi.pro.
+
+        Returns:
+            currentSign (Integer): 1 for positive-direction current, -1 for negative.
+        """
+        if self._currentSign is None:
+            self._currentSign = -1 if scipy.mean(self.getIpMeas()) > 1e5 else 1
+        return self._currentSign
 
 
 class TCVLIUQEMATTreeProp(TCVLIUQEMATTree, PropertyAccessMixin):
