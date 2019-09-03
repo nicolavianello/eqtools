@@ -35,7 +35,7 @@ try:
     try:
         from MDSplus._treeshr import TreeException
     except:
-        from MDSplus.mdsExceptions.treeshrExceptions import TreeException
+        from MDSplus.mdsExceptions import TreeException
     _has_MDS = True
 except Exception as _e_MDS:
     if isinstance(_e_MDS, ImportError):
@@ -59,7 +59,6 @@ try:
     from matplotlib.path import Path
     from matplotlib.patches import PathPatch
     from matplotlib.ticker import MaxNLocator
-    import matplotlib._cntr as cntr
 
 except Exception:
     warnings.warn("matplotlib modules could not be loaded -- plotting and gfile"
@@ -244,7 +243,7 @@ class TCVLIUQEMATTree(Equilibrium):
             nz = len(self._zGrid)
         except TypeError:
             nt, nr, nz = 0, 0, 0
-            print 'tree has failed data load.'
+            print('tree has failed data load.')
 
         data = namedtuple('Info', ['shot', 'tree', 'nr', 'nz', 'nt'])
         return data(shot=self._shot, tree=self._tree, nr=nr, nz=nz, nt=nt)

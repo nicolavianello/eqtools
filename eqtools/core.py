@@ -820,7 +820,7 @@ class Equilibrium(object):
             # arrays to be broadcastable:
             if not blob[-3]:
                 if each_t:
-                    for k in xrange(0, len(blob[-1])):
+                    for k in range(0, len(blob[-1])):
                         psi_boundary = scipy.expand_dims(psi_boundary, -1)
                         psi_0 = scipy.expand_dims(psi_0, -1)
                 else:
@@ -1465,7 +1465,7 @@ class Equilibrium(object):
         elif method == 'p':
             return self.rz2p(*args, **kwargs)
         elif method == 'pprime':
-            return self.rz2pprime(*arg, **kwargs)
+            return self.rz2pprime(*args, **kwargs)
         elif method == 'v':
             return self.rz2v(*args, **kwargs)
         else:
@@ -2022,7 +2022,7 @@ class Equilibrium(object):
                     # TODO: Is there a clever way to do this without a loop?
                     Z_mid_temp = scipy.ones_like(R_mid, dtype=float)
                     t_temp = scipy.ones_like(R_mid, dtype=float)
-                    for k in xrange(0, len(Z_mid)):
+                    for k in range(0, len(Z_mid)):
                         Z_mid_temp[k] *= Z_mid[k]
                         t_temp[k] *= t[k]
                     Z_mid = Z_mid_temp
@@ -7669,7 +7669,7 @@ class Equilibrium(object):
         r.set_initial_value([R0, Z0], phi0)
         out = scipy.zeros((nsteps + 1, 3)) # R, Z, Phi
         out[0, :] = [R0, Z0, phi0]
-        for i in xrange(1, nsteps + 1):
+        for i in range(1, nsteps + 1):
             out[i, 0:2] = r.integrate(r.t + dphi)
             out[i, 2] = r.t
         return out
@@ -8666,7 +8666,7 @@ class Equilibrium(object):
         if start is None:
             # If start is None, it means to use the instance's default unit (implied to the power of 1):
             start = self._length_unit
-        elif isinstance(start, (int, long)):
+        elif isinstance(start, int):
             # If start is an integer type, this is used as the power applied to the instance's default unit:
             if self._length_unit != 'default':
                 start = self._length_unit + '^' + str(start)
@@ -8675,7 +8675,7 @@ class Equilibrium(object):
                 start = self._length_unit
         if start == 'default':
             # If start is 'default', the thing passed to default is used, but only if it is a complete unit specification:
-            if default is None or isinstance(default, (int, long)) or default == 'default':
+            if default is None or isinstance(default, int) or default == 'default':
                 raise ValueError("You must specify a complete unit (i.e., "
                                  "non-None, non-integer and not 'default') "
                                  "when using 'default' for the starting unit.")
@@ -8683,7 +8683,7 @@ class Equilibrium(object):
                 start = default
         
         # Default unit:
-        if default is None or isinstance(default, (int, long)) or default == 'default':
+        if default is None or isinstance(default, int) or default == 'default':
             # If start is 'default', these cases have already been caught above.
             default = start
         
@@ -8691,7 +8691,7 @@ class Equilibrium(object):
         if end is None:
             # If end is None, it means to use the instance's default unit (implied to the power of 1):
             end = self._length_unit
-        elif isinstance(end, (int, long)):
+        elif isinstance(end, int):
             # If end is an integer type, this is used as the power applied to the instance's default unit:
             if self._length_unit != 'default':
                 end = self._length_unit + '^' + str(end)
