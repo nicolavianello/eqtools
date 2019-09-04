@@ -611,7 +611,7 @@ class EqdskReader(Equilibrium):
         except TypeError:
             nr,nz,shot,time=0
             efittype=None
-            print 'failed to load data from g-file.'
+            print('failed to load data from g-file.')
         return data(shot=shot,time=time,nr=nr,nz=nz,efittype=efittype)
 
     def readAFile(self,afile):

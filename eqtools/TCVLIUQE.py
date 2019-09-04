@@ -170,7 +170,7 @@ class TCVLIUQETree(EFITTree):
             nz = len(self._zGrid)
         except TypeError:
             nt, nr, nz = 0, 0, 0
-            print 'tree has failed data load.'
+            print('tree has failed data load.')
 
         data = namedtuple('Info', ['shot', 'tree', 'nr', 'nz', 'nt'])
         return data(shot=self._shot, tree=self._tree, nr=nr, nz=nz, nt=nt)

@@ -25,7 +25,6 @@ working with TCV LIUQE Equilibrium.
 
 import scipy
 from collections import namedtuple
-from .EFIT import EFITTree
 from .core import PropertyAccessMixin, ModuleWarning, Equilibrium
 import warnings
 import numpy as np
