@@ -36,7 +36,7 @@ class ModuleWarning(Warning):
     pass
 
 try:
-    import trispline
+    from . import trispline
     _has_trispline = True
 except ImportError:
     warnings.warn("trispline module could not be loaded -- tricubic spline "
@@ -50,7 +50,7 @@ try:
     import matplotlib.gridspec as mplgs
     import matplotlib.patches as mpatches
     import matplotlib.path as mpath
-    import filewriter
+    from . import filewriter
     from mpl_toolkits.mplot3d import Axes3D
     from mpl_toolkits.axes_grid1 import make_axes_locatable
     from matplotlib.colorbar import ColorbarBase

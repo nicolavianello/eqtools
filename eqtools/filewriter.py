@@ -22,7 +22,7 @@ import scipy.interpolate
 import time
 #import core
 import matplotlib.pyplot as plt
-import trispline
+from . import trispline
 
 def gfile(obj, tin, nw=None, nh=None, shot=None, name=None, tunit = 'ms', title='EQTOOLS', nbbbs=100):
     """Generates an EFIT gfile with gfile naming convention

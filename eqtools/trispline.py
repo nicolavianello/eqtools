@@ -24,7 +24,7 @@ contains an enhanced bivariate spline which generates bounds errors.
 
 import scipy 
 import scipy.interpolate
-import _tricub
+from . import _tricub
 
 
 class Spline():

@@ -58,8 +58,10 @@ try:
     from matplotlib.path import Path
     from matplotlib.patches import PathPatch
     from matplotlib.ticker import MaxNLocator
-    import matplotlib._cntr as cntr
-
+    try:
+        import matplotlib._cntr as cntr
+    except:
+        import legacycontour._cntr as cntr
 except Exception:
     warnings.warn("matplotlib modules could not be loaded -- plotting and gfile"
                   " writing will not be available.",

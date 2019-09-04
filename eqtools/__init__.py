@@ -33,3 +33,4 @@ from .FromArrays import *
 from .TCVLIUQE import * 
 from .TCVLIUQEMAT import *
 from .filewriter import *
+from .trispline import *
