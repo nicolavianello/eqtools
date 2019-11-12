@@ -34,3 +34,4 @@ from .TCVLIUQE import *
 from .TCVLIUQEMAT import *
 from .filewriter import *
 from .trispline import *
+from .JET import *
