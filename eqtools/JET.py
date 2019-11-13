@@ -20,16 +20,15 @@
 working with ASDEX Upgrade experimental data.
 """
 
+import warnings
+
 import scipy
 
-from .core import PropertyAccessMixin, ModuleWarning, Equilibrium
-
-import warnings
+from .core import ModuleWarning, Equilibrium
 
 try:
     from jet.data import sal
     from jet.data.sal import SALException
-
     _has_sal = True
 except ImportError:
     warnings.warn(
@@ -38,10 +37,8 @@ except ImportError:
         ModuleWarning,
     )
     _has_sal = False
-
 try:
     import matplotlib.pyplot as plt
-
     _has_plt = True
 except:
     warnings.warn(
@@ -1011,11 +1008,11 @@ class JETSALData(Equilibrium):
             try:
                 btaxvNode = sal.get(
                     self._DATA_PATH.format(
-                        self._shot, self.user, self.dda, "bvac", self.sequence
+                        self._shot, self.user, self.dda, "btax", self.sequence
                     )
                 )
                 # technically Bave is the average over the volume, but for the core its a singular value
-                self._btaxv = btaxvNode.data
+                self._btaxv = btaxvNode.data[:, 0]
                 self._defaultUnits["_btaxv"] = str(btaxvNode.units)
             except (PyddError, AttributeError):
                 raise ValueError("data retrieval failed.")
@@ -1119,7 +1116,7 @@ class JETSALData(Equilibrium):
                 )
                 self._Jp = JpNode.data
                 self._defaultUnits["_Jp"] = str(JpNode.units)
-            except (PyddError, AttributeError):
+            except SALException:
                 raise ValueError("data retrieval failed.")
         return self._Jp.copy()
 
@@ -1129,7 +1126,18 @@ class JETSALData(Equilibrium):
         Raises:
             NotImplementedError: Not implemented on ASDEX-Upgrade reconstructions.
         """
-        raise NotImplementedError("self.getBetaT not implemented.")
+        if self._betat is None:
+            try:
+                BtNode = sal.get(
+                    self._DATA_PATH.format(
+                        self._shot, self.user, self.dda, "bttm", self.sequence
+                    )
+                )
+                self._betat = BtNode.data
+                self._defaultUnits["_betat"] = BtNode.units
+            except SALException:
+                raise ValueError("data retrieval failed")
+            return self._betat.copy()
 
     def getBetaP(self):
         """returns the calculated poloidal beta.
@@ -1142,10 +1150,14 @@ class JETSALData(Equilibrium):
         """
         if self._betap is None:
             try:
-                betapNode = self.getSSQ("betpol")
+                betapNode = sal.get(
+                    self._DATA_PATH.format(
+                        self._shot, self.user, self.dda, "btpm", self.sequence
+                    )
+                )
                 self._betap = betapNode.data
                 self._defaultUnits["_betap"] = str(betapNode.unit)
-            except (PyddError, AttributeError):
+            except SALException:
                 raise ValueError("data retrieval failed.")
         return self._betap.copy()
 
@@ -1160,20 +1172,29 @@ class JETSALData(Equilibrium):
         """
         if self._Li is None:
             try:
-                LiNode = self.getSSQ("li")
+                LiNode = sal.get(
+                    self._DATA_PATH.format(
+                        self._shot, self.user, self.dda, "xlim", self.sequence
+                    )
+                )
                 self._Li = LiNode.data
                 self._defaultUnits["_Li"] = str(LiNode.unit)
-            except (PyddError, AttributeError):
+            except SALException:
                 raise ValueError("data retrieval failed.")
         return self._Li.copy()
 
     def getBetas(self):
         """pulls calculated betap, betat, internal inductance.
 
-        Raises:
-            NotImplementedError: Not implemented on ASDEX-Upgrade reconstructions.
         """
-        raise NotImplementedError("self.getBetas not implemented.")
+        try:
+            betat = self.getBetaT()
+            betap = self.getBetaP()
+            Li = self.getLi()
+            data = namedtuple("Betas", ["betat", "betap", "Li"])
+            return data(betat=betat, betap=betap, Li=Li)
+        except ValueError:
+            raise ValueError("data retrieval failed.")
 
     def getDiamagFlux(self):
         """returns the measured diamagnetic-loop flux.
@@ -1189,7 +1210,18 @@ class JETSALData(Equilibrium):
         Raises:
             NotImplementedError: Not implemented on ASDEX-Upgrade reconstructions.
         """
-        raise NotImplementedError("self.getDiamagBetaT not implemented.")
+        if self._betatd is None:
+            try:
+                BetaTDNode = sal.get(
+                    self._DATA_PATH.format(
+                        self._shot, self.user, self.dda, "bttd", self.sequence
+                    )
+                )
+                self._betatd = BetaTDNode.data
+                self._defaultUnits["_betatd"] = str(BetaTDNode.unit)
+            except SALException:
+                raise ValueError("data retrieval failed.")
+        return self._betatd.copy()
 
     def getDiamagBetaP(self):
         """returns diamagnetic-loop avg poloidal beta.
@@ -1197,7 +1229,18 @@ class JETSALData(Equilibrium):
         Raises:
             NotImplementedError: Not implemented on ASDEX-Upgrade reconstructions.
         """
-        raise NotImplementedError("self.getDiamagBetaP not implemented.")
+        if self._betapd is None:
+            try:
+                BetaPDNode = sal.get(
+                    self._DATA_PATH.format(
+                        self._shot, self.user, self.dda, "btpd", self.sequence
+                    )
+                )
+                self._betatd = BetaPDNode.data
+                self._defaultUnits["_betapd"] = str(BetaTDNode.unit)
+            except SALException:
+                raise ValueError("data retrieval failed.")
+        return self._betapd.copy()
 
     def getDiamagTauE(self):
         """returns diamagnetic-loop energy confinement time.
@@ -1213,16 +1256,38 @@ class JETSALData(Equilibrium):
         Raises:
             NotImplementedError: Not implemented on ASDEX-Upgrade reconstructions.
         """
-        raise NotImplementedError("self.getDiamagWp not implemented.")
+        if self._WDiamag is None:
+            try:
+                Node = sal.get(
+                    self._DATA_PATH.format(
+                        self._shot, self.user, self.dda, "wdia", self.sequence
+                    )
+                )
+                self._Wdiamag = Node.data
+                self._defaultUnits["_Wdiamag"] = Node.units
+            except SALException:
+                raise ValueError("data retrieval failed")
+        return self._Wdiamag.copy()
 
     def getDiamag(self):
-        """pulls diamagnetic flux measurements, toroidal and poloidal beta, 
+        """pulls diamagnetic flux measurements, toroidal and poloidal beta,
         energy confinement time and stored energy.
-        
+
+        Returns:
+            namedtuple containing (diamag. flux, betatd, betapd, tauDiamag, WDiamag)
+
         Raises:
-            NotImplementedError: Not implemented on ASDEX-Upgrade reconstructions.
+            ValueError: if module cannot retrieve data from MDS tree.
         """
-        raise NotImplementedError("self.getDiamag not implemented.")
+        try:
+            dFlux = self.getDiamagFlux()
+            betatd = self.getDiamagBetaT()
+            betapd = self.getDiamagBetaP()
+            dWp = self.getDiamagWp()
+            data = namedtuple("Diamag", ["diaFlux", "diaBetat", "diaBetap", "diaWp"])
+            return data(diaFlux=dFlux, diaBetat=betatd, diaBetap=betapd, diaWp=dWp)
+        except ValueError:
+            raise ValueError("data retrieval failed.")
 
     def getWMHD(self):
         """returns calculated MHD stored energy.
@@ -1235,10 +1300,14 @@ class JETSALData(Equilibrium):
         """
         if self._WMHD is None:
             try:
-                WMHDNode = self.getSSQ("Wmhd")
+                WMHDNode = sal.get(
+                    self._DATA_PATH.format(
+                        self._shot, self.user, self.dda, "wp", self.sequence
+                    )
+                )
                 self._WMHD = WMHDNode.data
-                self._defaultUnits["_WMHD"] = str(WMHDNode.unit)
-            except (PyddError, AttributeError):
+                self._defaultUnits["_WMHD"] = str(WMHDNode.units)
+            except SALException:
                 raise ValueError("data retrieval failed.")
         return self._WMHD.copy()
 
@@ -1286,24 +1355,16 @@ class JETSALData(Equilibrium):
         """
         if self._BCentr is None:
             try:
-                try:
-                    temp = dd.shotfile("MBI", self._shot)
-                    BCentrNode = temp("BTFABB")
-                    self._BCentr = BCentrNode.data[
-                        self._getNearestIdx(self.getTimeBase(), BCentrNode.time)
-                    ]
-                    self._defaultUnits["_BCentr"] = str(BCentrNode.unit)
-                except PyddError:
-                    temp = dd.shotfile("MBI", self._shot)
-                    BCentrNode = temp("BTF")
-                    self._BCentr = BCentrNode.data[
-                        self._getNearestIdx(self.getTimeBase(), BCentrNode.time)
-                    ]
-                    self._defaultUnits["_BCentr"] = str(BCentrNode.unit)
-            except (PyddError, AttributeError):
+                Node = sal.get(
+                    self._DATA_PATH.format(
+                        self._shot, self.user, self.dda, "bvac", self.sequence
+                    )
+                )
+                self._BCentr = Node.data
+                self._defaultUnits["_Bcentr"] = str(Node.units)
+            except SALException:
                 raise ValueError("data retrieval failed.")
-
-        return self._BCentr
+        return self._BCentr.copy()
 
     def getRCentr(self, length_unit=1):
         """Returns Radius of BCenter measurement
@@ -1312,7 +1373,7 @@ class JETSALData(Equilibrium):
             R: Radial position where Bcent calculated [m]
         """
         if self._RCentr is None:
-            self._RCentr = 1.65  # Hardcoded from MAI file description of BTF
+            self._RCentr = 2.96  # Hardcoded from MAI file description of BTF
             self._defaultUnits["_RCentr"] = "m"
         return self._RCentr
 
@@ -1337,11 +1398,18 @@ class JETSALData(Equilibrium):
         """
         if self._Rlimiter is None or self._Zlimiter is None:
             try:
-                self._Rlimiter, self._Zlimiter = AUGVessel.getMachineCrossSection(
-                    self._shot
-                )
+                self._Rlimiter = sal.get(
+                    self._DATA_PATH.format(
+                        self._shot, self.user, self.dda, "rlim", self.sequence
+                    )
+                ).data[0, :]
+                self._Zlimiter = sal.get(
+                    self._DATA_PATH.format(
+                        self._shot, self.user, self.dda, "zlim", self.sequence
+                    )
+                ).data[0, :]
 
-            except (PyddError, AttributeError):
+            except SALException:
                 raise ValueError("data retrieval failed.")
         return (self._Rlimiter, self._Zlimiter)
 
@@ -1354,9 +1422,7 @@ class JETSALData(Equilibrium):
         Returns:
             result from getMachineCrossSection().
         """
-        x, y = AUGVessel.getMachineCrossSectionFull(self._shot)
-        x[x > self.getRGrid().max()] = self.getRGrid().max()
-
+        x, y = self.getMachineCrossSection()
         return (x, y)
 
     def getCurrentSign(self):
@@ -1369,28 +1435,3 @@ class JETSALData(Equilibrium):
         if self._currentSign is None:
             self._currentSign = -1 if scipy.mean(self.getIpMeas()) > 1e5 else 1
         return self._currentSign
-
-    def getParam(self, path):
-        """Backup function, applying a direct path input for tree-like data 
-        storage access for parameters not typically found in 
-        :py:class:`Equilbrium <eqtools.core.Equilbrium>` object.  
-        Directly calls attributes read from g/a-files in copy-safe manner.
-
-        Args:
-            name (String): Parameter name for value stored in EqdskReader 
-                instance.
-
-        Raises:
-            NotImplementedError: Not implemented on ASDEX-Upgrade reconstructions.
-        """
-        raise NotImplementedError("self.getEnergy not implemented.")
-
-
-
-
-class AUGDDDataProp(AUGDDData, PropertyAccessMixin):
-    """AUGDDData with the PropertyAccessMixin added to enable property-style
-    access. This is good for interactive use, but may drag the performance down.
-    """
-
-    pass
