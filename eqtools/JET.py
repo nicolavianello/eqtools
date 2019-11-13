@@ -138,7 +138,7 @@ class JETSALData(Equilibrium):
         # identify the current head sequence number if seq = 0 to ensure all data from same sequence
         # this should mitigate the very low probability event of new data being written part way through the read
         if sequence == 0:
-            r = sal.list(self._DDA_PATH.format(pulse, user, dda, sequence))
+            r = sal.list(self._DDA_PATH.format(self._shot, user, dda, sequence))
             sequence = r.revision_latest
         self.sequence = sequence
         self._defaultUnits = {}
@@ -229,15 +229,15 @@ class JETSALData(Equilibrium):
 
         # Call the get functions to preload the data. Add any other calls you
         # want to preload here.
-        self.getTimeBase()  # check
-        self._timeidxend = self.getTimeBase().size
-        self.getFluxGrid()  # loads _psiRZ, _rGrid and _zGrid at once. check
-        self.getFluxLCFS()  # check
-        self.getFluxAxis()  # check
-        self.getFluxVol()  # check
-        self._lpf = self.getFluxVol().shape[1]
-        self.getVolLCFS()  # check
-        self.getQProfile()  #
+        # self.getTimeBase()  # check
+        # self._timeidxend = self.getTimeBase().size
+        # self.getFluxGrid()  # loads _psiRZ, _rGrid and _zGrid at once. check
+        # self.getFluxLCFS()  # check
+        # self.getFluxAxis()  # check
+        # self.getFluxVol()  # check
+        # self._lpf = self.getFluxVol().shape[1]
+        # self.getVolLCFS()  # check
+        # self.getQProfile()  #
 
     def __str__(self):
         """string formatting for ASDEX Upgrade Equilibrium class.
@@ -303,8 +303,7 @@ class JETSALData(Equilibrium):
         if self._time is None:
             try:
                 self.getFluxGrid()
-                self._defaultUnits["_time"] = str(timeNode.unit)
-            except SALExcepetion:
+            except SALException:
                 raise ValueError("data retrieval failed.")
         return self._time.copy()
 
@@ -327,21 +326,25 @@ class JETSALData(Equilibrium):
                     )
                 )
                 self._time = self._packed_psi.dimensions[0].data
+                self._defaultUnits["_time"] = str(self._packed_psi.dimensions[0].units)
 
                 # psi grid axis
-                self._rGrid = sal.get(
+                _rGrid = sal.get(
                     self._DATA_PATH.format(
                         self._shot, self.user, self.dda, "psir", self.sequence
                     )
-                ).data
-                self._zGrid = sal.get(
+                )
+                _zGrid = sal.get(
                     self._DATA_PATH.format(
                         self._shot, self.user, self.dda, "psiz", self.sequence
                     )
-                ).data
-                self._defaultUnits["_rGrid"] = str(psinode.unit)
-                self._defaultUnits["_zGrid"] = str(psinode.unit)
-                self._psiRZ = self._packed_psi.data
+                )
+                self._defaultUnits["_rGrid"] = str.lower(_rGrid.units)
+                self._defaultUnits["_zGrid"] = str.lower(_zGrid.units)
+                self._psiRZ = self._packed_psi.data.transpose().reshape(
+                    _rGrid.data.size,_zGrid.data.size,self._time.size)
+                self._rGrid = _rGrid.data
+                self._zGrid = _zGrid.data
                 self._defaultUnits["_psiRZ"] = "Vs"  # HARDCODED DUE TO CALIBRATED=FALSE
 
             except:
@@ -395,13 +398,13 @@ class JETSALData(Equilibrium):
         """
         if self._psiAxis is None:
             try:
-                self._psi_axis = sal.get(
+                _psi_axis = sal.get(
                     self._DATA_PATH.format(
                         self._shot, self.user, self.dda, "faxs", self.sequence
                     )
                 )
-                self._psiAxis = self._psi_axis.data
-                self._defaultUnits["_psiAxis"] = str(psiAxisNode.unit)
+                self._psiAxis = _psi_axis.data
+                self._defaultUnits["_psiAxis"] = str.lower(_psi_axis.units)
             except:
                 raise ValueError("data retrieval failed.")
         return self._psiAxis.copy()
@@ -423,8 +426,8 @@ class JETSALData(Equilibrium):
                     )
                 )
                 self._psiLCFS = psiLCFSNode.data
-                self._defaultUnits["_psiLCFS"] = str(psiLCFSNode.unit)
-            except PyddError:
+                self._defaultUnits["_psiLCFS"] = str.lower(psiLCFSNode.units)
+            except SALException:
                 raise ValueError("data retrieval failed.")
         return self._psiLCFS.copy()
 
@@ -464,8 +467,8 @@ class JETSALData(Equilibrium):
                     )
                 )
                 self._volLCFS = volLCFSNode.data
-                self._defaultUnits["_volLCFS"] = str(volLCFSNode.unit)
-            except SALExcepetion:
+                self._defaultUnits["_volLCFS"] = str.lower(volLCFSNode.units)
+            except SALException:
                 raise ValueError("data retrieval failed.")
         # Default units should be 'cm^3':
         unit_factor = self._getLengthConversionFactor(
@@ -508,7 +511,7 @@ class JETSALData(Equilibrium):
                 self._RLCFS = (
                     rgeo.data
                 )  # construct a 2d grid of angles, take cos, multiply by radius
-                self._defaultUnits["_RLCFS"] = str(RLCFSNode.unit)
+                self._defaultUnits["_RLCFS"] = str.lower(rgeo.units)
             except SALException:
                 raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
@@ -535,8 +538,8 @@ class JETSALData(Equilibrium):
                 self._ZLCFS = (
                     zgeo.data
                 )  # construct a 2d grid of angles, take sin, multiply by radius
-                self._defaultUnits["_ZLCFS"] = str(ZLCFSNode.unit)
-            except SALExcepetion:
+                self._defaultUnits["_ZLCFS"] = str.lower(zgeo.units)
+            except SALException:
                 raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
             self._defaultUnits["_ZLCFS"], length_unit
@@ -562,7 +565,7 @@ class JETSALData(Equilibrium):
                 )
                 self._fpol = fNode.data
                 self._defaultUnits["_fpol"] = str("T m")
-            except SALExcepetion:
+            except SALException:
                 raise ValueError("data retrieval failed.")
         return self._fpol.copy()
 
@@ -583,7 +586,7 @@ class JETSALData(Equilibrium):
                     )
                 )
                 self._fluxPres = fluxPresNode.data
-                self._defaultUnits["_fluxPres"] = str(fluxPresNode.unit)
+                self._defaultUnits["_fluxPres"] = str.lower(fluxPresNode.units)
             except SALException:
                 raise ValueError("data retrieval failed.")
         return self._fluxPres.copy()
@@ -640,7 +643,7 @@ class JETSALData(Equilibrium):
                     )
                 )
                 self._kappa = kappaNode.data
-                self._defaultUnits["_kappa"] = str(kappaNode.unit)
+                self._defaultUnits["_kappa"] = str.lower(kappaNode.units)
             except SALException:
                 raise ValueError("data retrieval failed.")
         return self._kappa.copy()
@@ -662,8 +665,8 @@ class JETSALData(Equilibrium):
                     )
                 )
                 self._dupper = dupperNode.data
-                self._defaultUnits["_dupper"] = str(dupperNode.unit)
-            except PyddError:
+                self._defaultUnits["_dupper"] = str.lower(dupperNode.units)
+            except SALException:
                 raise ValueError("data retrieval failed.")
         return self._dupper.copy()
 
@@ -684,8 +687,8 @@ class JETSALData(Equilibrium):
                     )
                 )
                 self._dlower = dlowerNode.data
-                self._defaultUnits["_dlower"] = str(dlowerNode.unit)
-            except PyddError:
+                self._defaultUnits["_dlower"] = str.lower(dlowerNode.units)
+            except SALException:
                 raise ValueError("data retrieval failed.")
         return self._dlower.copy()
 
@@ -724,8 +727,8 @@ class JETSALData(Equilibrium):
                     )
                 )
                 self._rmag = rmagNode.data
-                self._defaultUnits["_rmag"] = str(rmagNode.unit)
-            except (PyddError, AttributeError):
+                self._defaultUnits["_rmag"] = str.lower(rmagNode.units)
+            except SALException:
                 raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
             self._defaultUnits["_rmag"], length_unit
@@ -749,8 +752,8 @@ class JETSALData(Equilibrium):
                     )
                 )
                 self._zmag = zmagNode.data
-                self._defaultUnits["_zmag"] = str(zmagNode.unit)
-            except PyddError:
+                self._defaultUnits["_zmag"] = str.lower(zmagNode.units)
+            except SALException:
                 raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
             self._defaultUnits["_zmag"], length_unit
@@ -778,8 +781,8 @@ class JETSALData(Equilibrium):
                     )
                 )
                 self._areaLCFS = areaLCFSNode.data
-                self._defaultUnits["_areaLCFS"] = str(areaLCFSNode.unit)
-            except PyddError:
+                self._defaultUnits["_areaLCFS"] = str.lower(areaLCFSNode.units)
+            except SALException:
                 raise ValueError("data retrieval failed.")
         # Units should be cm^2:
         unit_factor = self._getLengthConversionFactor(
@@ -808,7 +811,7 @@ class JETSALData(Equilibrium):
                     )
                 )
                 self._aLCFS = aLCFSNode.data - 2.96
-                self._defaultUnits["_aLCFS"] = str(aLCFSNode.unit)
+                self._defaultUnits["_aLCFS"] = str.lower(aLCFSNode.units)
             except SALException:
                 raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
@@ -828,7 +831,7 @@ class JETSALData(Equilibrium):
         """
         if self._RmidOUT is None:
             try:
-                _RmidOUT = sal.get(
+                _RmidOout = sal.get(
                     self._DATA_PATH.format(
                         self._shot, self.user, self.dda, "rmj0", self.sequence
                     )
@@ -895,7 +898,7 @@ class JETSALData(Equilibrium):
                     )
                 )
                 self._qpsi = qpsiNode.data
-                self._defaultUnits["_qpsi"] = str(qpsiNode.units)
+                self._defaultUnits["_qpsi"] = str.lower(qpsiNode.units)
             except SALException:
                 raise ValueError("data retrieval failed.")
         return self._qpsi.copy()
@@ -917,7 +920,7 @@ class JETSALData(Equilibrium):
                     )
                 )
                 self._q0 = q0Node.data
-                self._defaultUnits["_q0"] = str(q0Node.units)
+                self._defaultUnits["_q0"] = str.lower(q0Node.units)
             except SALException:
                 raise ValueError("data retrieval failed.")
         return self._q0.copy()
@@ -939,7 +942,7 @@ class JETSALData(Equilibrium):
                     )
                 )
                 self._q95 = q95Node.data
-                self._defaultUnits["_q95"] = str(q95Node.units)
+                self._defaultUnits["_q95"] = str.lower(q95Node.units)
             except SALException:
                 raise ValueError("data retrieval failed.")
         return self._q95.copy()
@@ -961,7 +964,7 @@ class JETSALData(Equilibrium):
                 self._defaultUnits["_LCFS"] = str(qLCFSNode.units)
             except SALException:
                 raise ValueError("data retrieval failed.")
-        return self._LCFS.copy()
+        return self._qLCFS.copy()
 
     def getQ1Surf(self, length_unit=1):
         """returns outboard-midplane minor radius of q=1 surface.
@@ -1014,7 +1017,7 @@ class JETSALData(Equilibrium):
                 # technically Bave is the average over the volume, but for the core its a singular value
                 self._btaxv = btaxvNode.data[:, 0]
                 self._defaultUnits["_btaxv"] = str(btaxvNode.units)
-            except (PyddError, AttributeError):
+            except SALException:
                 raise ValueError("data retrieval failed.")
         return self._btaxv.copy()
 
@@ -1237,7 +1240,7 @@ class JETSALData(Equilibrium):
                     )
                 )
                 self._betatd = BetaPDNode.data
-                self._defaultUnits["_betapd"] = str(BetaTDNode.unit)
+                self._defaultUnits["_betapd"] = str(BetaPDNode.units)
             except SALException:
                 raise ValueError("data retrieval failed.")
         return self._betapd.copy()
