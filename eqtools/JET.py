@@ -341,8 +341,8 @@ class JETSALData(Equilibrium):
                 )
                 self._defaultUnits["_rGrid"] = str.lower(_rGrid.units)
                 self._defaultUnits["_zGrid"] = str.lower(_zGrid.units)
-                self._psiRZ = self._packed_psi.data.transpose().reshape(
-                    _rGrid.data.size,_zGrid.data.size,self._time.size)
+                self._psiRZ = self._packed_psi.data.reshape(
+                    self._time.size,_rGrid.data.size,_zGrid.data.size)
                 self._rGrid = _rGrid.data
                 self._zGrid = _zGrid.data
                 self._defaultUnits["_psiRZ"] = "Vs"  # HARDCODED DUE TO CALIBRATED=FALSE
