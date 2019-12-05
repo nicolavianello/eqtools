@@ -17,18 +17,18 @@
 # along with EqTools.  If not, see <http://www.gnu.org/licenses/>.
 
 """This module provides classes inheriting :py:class:`eqtools.Equilibrium` for 
-working with ASDEX Upgrade experimental data.
+working with JET experimental data.
 """
 
 import warnings
-
 import scipy
-
 from .core import ModuleWarning, Equilibrium
+from collections import namedtuple
 
 try:
     from jet.data import sal
     from jet.data.sal import SALException
+
     _has_sal = True
 except ImportError:
     warnings.warn(
@@ -39,6 +39,7 @@ except ImportError:
     _has_sal = False
 try:
     import matplotlib.pyplot as plt
+
     _has_plt = True
 except:
     warnings.warn(
@@ -51,7 +52,7 @@ except:
 
 class JETSALData(Equilibrium):
     """Inherits :py:class:`eqtools.Equilibrium` class. Machine-specific data
-    handling class for JET Upgrade. Pulls JET data through the jet.sal classes
+    handling class for JET Tokamak. Pulls JET data through the jet.sal classes
     and stores as object attributes. Each data variable or set of
     variables is recovered with a corresponding getter method. Essential data
     for mapping are pulled on initialization (e.g. psirz grid). Additional
@@ -66,13 +67,9 @@ class JETSALData(Equilibrium):
         shot (integer): JET shot index.
     
     Keyword Args:
-        shotfile (string): Optional input for alternate shotfile, defaults to 'EQH'
-            (i.e., CLISTE results are in EQH,EQI with other reconstructions
-            Available (FPP, EQE, ect.).
-        edition (integer): Describes the edition of the shotfile to be used
-        shotfile2 (string): Describes companion 0D equilibrium data, will automatically
-            reference based off of shotfile, but can be manually specified for 
-            unique reconstructions, etc.
+        user (string): user name for ppf file. Default is 'jetppf'
+        dda (string): dda of corresponding ppf file. Default is 'efit'
+        sequence (int): sequence number. If not given take the last sequence of ppf file written
         length_unit (string): Sets the base unit used for any quantity whose
             dimensions are length to any power. Valid options are:
                 
@@ -100,8 +97,6 @@ class JETSALData(Equilibrium):
         monotonic (Boolean): Sets whether or not the "monotonic" form of time
             window finding is used. If True, the timebase must be monotonically
             increasing. Default is False (use slower, safer method).
-        experiment: Used to describe the work space that the shotfile is located
-            It defaults to 'AUGD' but can be set to other values
     """
 
     def __init__(
@@ -229,18 +224,14 @@ class JETSALData(Equilibrium):
 
         # Call the get functions to preload the data. Add any other calls you
         # want to preload here.
-        # self.getTimeBase()  # check
-        # self._timeidxend = self.getTimeBase().size
-        # self.getFluxGrid()  # loads _psiRZ, _rGrid and _zGrid at once. check
-        # self.getFluxLCFS()  # check
-        # self.getFluxAxis()  # check
-        # self.getFluxVol()  # check
-        # self._lpf = self.getFluxVol().shape[1]
-        # self.getVolLCFS()  # check
-        # self.getQProfile()  #
+        self.getFluxGrid()  # loads _psiRZ, _rGrid and _zGrid at once. check
+        self.getTimeBase()  # check
+        self.getFluxLCFS()  # check
+        self.getFluxAxis()  # check
+        self.getQProfile()  #
 
     def __str__(self):
-        """string formatting for ASDEX Upgrade Equilibrium class.
+        """string formatting for JET Upgrade Equilibrium class.
         """
         try:
             nt = len(self._time)
@@ -342,7 +333,8 @@ class JETSALData(Equilibrium):
                 self._defaultUnits["_rGrid"] = str.lower(_rGrid.units)
                 self._defaultUnits["_zGrid"] = str.lower(_zGrid.units)
                 self._psiRZ = self._packed_psi.data.reshape(
-                    self._time.size,_rGrid.data.size,_zGrid.data.size)
+                    self._time.size, _rGrid.data.size, _zGrid.data.size
+                )
                 self._rGrid = _rGrid.data
                 self._zGrid = _zGrid.data
                 self._defaultUnits["_psiRZ"] = "Vs"  # HARDCODED DUE TO CALIBRATED=FALSE
@@ -831,7 +823,7 @@ class JETSALData(Equilibrium):
         """
         if self._RmidOUT is None:
             try:
-                _RmidOout = sal.get(
+                _RmidOut = sal.get(
                     self._DATA_PATH.format(
                         self._shot, self.user, self.dda, "rmj0", self.sequence
                     )

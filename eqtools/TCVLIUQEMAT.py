@@ -31,6 +31,7 @@ import numpy as np
 
 try:
     import MDSplus
+
     try:
         from MDSplus._treeshr import TreeException
     except:
@@ -38,15 +39,18 @@ try:
     _has_MDS = True
 except Exception as _e_MDS:
     if isinstance(_e_MDS, ImportError):
-        warnings.warn("MDSplus module could not be loaded -- classes that use "
-                      "MDSplus for data access will not work.",
-                      ModuleWarning)
+        warnings.warn(
+            "MDSplus module could not be loaded -- classes that use "
+            "MDSplus for data access will not work.",
+            ModuleWarning,
+        )
     else:
-        warnings.warn("MDSplus module could not be loaded -- classes that use"
-                      "MDSplus for data access will not work. Exception raised"
-                      "was of type %s, message was '%s'."
-                      % (_e_MDS.__class__, _e_MDS.message),
-                      ModuleWarning)
+        warnings.warn(
+            "MDSplus module could not be loaded -- classes that use"
+            "MDSplus for data access will not work. Exception raised"
+            "was of type %s, message was '%s'." % (_e_MDS.__class__, _e_MDS.message),
+            ModuleWarning,
+        )
     _has_MDS = False
 
 try:
@@ -60,9 +64,11 @@ try:
     from matplotlib.ticker import MaxNLocator
 
 except Exception:
-    warnings.warn("matplotlib modules could not be loaded -- plotting and gfile"
-                  " writing will not be available.",
-                  ModuleWarning)
+    warnings.warn(
+        "matplotlib modules could not be loaded -- plotting and gfile"
+        " writing will not be available.",
+        ModuleWarning,
+    )
 
 # we need to define the green function area from the polygon
 # see http://stackoverflow.com/questions/22678990/how-can-i-calculate-the-area-within-a-contour-in-python-using-the-matplotlib
@@ -131,12 +137,20 @@ class TCVLIUQEMATTree(Equilibrium):
         remote (Strig): String indicating the MDSplus server to connect to. Eventually this implies
             the module can be used through MDSplus tunneling
     """
-    def __init__(self, shot, tree='tcv_shot', length_unit='m', tspline=False, monotonic=True,
-                 server='tcvdata.epfl.ch'):
 
-        super(TCVLIUQEMATTree, self).__init__(length_unit=length_unit,
-                                              tspline=tspline,
-                                              monotonic=monotonic)
+    def __init__(
+        self,
+        shot,
+        tree="tcv_shot",
+        length_unit="m",
+        tspline=False,
+        monotonic=True,
+        server="tcvdata.epfl.ch",
+    ):
+
+        super(TCVLIUQEMATTree, self).__init__(
+            length_unit=length_unit, tspline=tspline, monotonic=monotonic
+        )
 
         # superceed the definition of MDStree
         self.server = server
@@ -161,7 +175,9 @@ class TCVLIUQEMATTree(Equilibrium):
         self._IpCalc = None  # calculated plasma current (t)
         self._IpMeas = None  # measured plasma current (t)
         self._Jp = None  # grid of current density (r,z,t)
-        self._currentSign = None  # sign of current for entire shot (calculated in moderately kludgey manner)
+        self._currentSign = (
+            None
+        )  # sign of current for entire shot (calculated in moderately kludgey manner)
 
         # safety factor parameters
         self._q0 = None  # q on-axis (t)
@@ -223,6 +239,7 @@ class TCVLIUQEMATTree(Equilibrium):
         self._RmidPsi = None  # max major radius of flux surface (t,psi)
         self.getTimeBase()
         self.getFluxGrid()
+
     # ---  1
     def getInfo(self):
         """returns namedtuple of shot information
@@ -242,9 +259,9 @@ class TCVLIUQEMATTree(Equilibrium):
             nz = len(self._zGrid)
         except TypeError:
             nt, nr, nz = 0, 0, 0
-            print('tree has failed data load.')
+            print("tree has failed data load.")
 
-        data = namedtuple('Info', ['shot', 'tree', 'nr', 'nz', 'nt'])
+        data = namedtuple("Info", ["shot", "tree", "nr", "nz", "nt"])
         return data(shot=self._shot, tree=self._tree, nr=nr, nz=nz, nt=nt)
 
     # ---  2
@@ -261,9 +278,9 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 timenode = self._MDSTree.get(r'tcv_eq("time_psi","liuqe.m")')
                 self._time = timenode.data()
-                self._defaultUnits['_time'] = 's'
+                self._defaultUnits["_time"] = "s"
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         return self._time.copy()
 
     # ---  3
@@ -279,14 +296,18 @@ class TCVLIUQEMATTree(Equilibrium):
         if self._psiRZ is None:
             try:
                 psinode = self._MDSTree.get(r'tcv_eq("psi","liuqe.m")')
-                self._psiRZ = psinode.data()  / (2.*scipy.pi)
-                self._rGrid = self._MDSTree.get(r'dim_of(tcv_eq("psi","liuqe.m"),0)').data()
-                self._zGrid = self._MDSTree.get(r'dim_of(tcv_eq("psi","liuqe.m"),1)').data()
-                self._defaultUnits['_psiRZ'] = str(psinode.units)
-                self._defaultUnits['_rGrid'] = 'm'
-                self._defaultUnits['_zGrid'] = 'm'
+                self._psiRZ = psinode.data() / (2.0 * scipy.pi)
+                self._rGrid = self._MDSTree.get(
+                    r'dim_of(tcv_eq("psi","liuqe.m"),0)'
+                ).data()
+                self._zGrid = self._MDSTree.get(
+                    r'dim_of(tcv_eq("psi","liuqe.m"),1)'
+                ).data()
+                self._defaultUnits["_psiRZ"] = str(psinode.units)
+                self._defaultUnits["_rGrid"] = "m"
+                self._defaultUnits["_zGrid"] = "m"
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         # the transpose is needed as psi
         # is saved as (R, Z, t) in the pulse file
         return self._psiRZ.copy()
@@ -302,11 +323,11 @@ class TCVLIUQEMATTree(Equilibrium):
             ValueError: if module cannot retrieve data from MDS tree.
         """
         if self._rGrid is None:
-            raise ValueError('data retrieval failed.')
+            raise ValueError("data retrieval failed.")
         # Default units should be 'm'
         unit_factor = self._getLengthConversionFactor(
-            self._defaultUnits['_rGrid'],
-            length_unit)
+            self._defaultUnits["_rGrid"], length_unit
+        )
         return unit_factor * self._rGrid.copy()
 
     # ---  5
@@ -320,11 +341,11 @@ class TCVLIUQEMATTree(Equilibrium):
             ValueError: if module cannot retrieve data from MDS tree.
         """
         if self._zGrid is None:
-            raise ValueError('data retrieval failed.')
+            raise ValueError("data retrieval failed.")
         # Default units should be 'm'
         unit_factor = self._getLengthConversionFactor(
-            self._defaultUnits['_zGrid'],
-            length_unit)
+            self._defaultUnits["_zGrid"], length_unit
+        )
         return unit_factor * self._zGrid.copy()
 
     # ---  6
@@ -340,10 +361,10 @@ class TCVLIUQEMATTree(Equilibrium):
         if self._psiAxis is None:
             try:
                 psiAxisNode = self._MDSTree.get(r'tcv_eq("psi_axis","liuqe.m")')
-                self._psiAxis = psiAxisNode.data() / (2.*scipy.pi)
-                self._defaultUnits['_psiAxis'] = str(psiAxisNode.units)
+                self._psiAxis = psiAxisNode.data() / (2.0 * scipy.pi)
+                self._defaultUnits["_psiAxis"] = str(psiAxisNode.units)
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         return self._psiAxis.copy()
 
     # ---  7
@@ -360,12 +381,12 @@ class TCVLIUQEMATTree(Equilibrium):
         if self._psiLCFS is None:
             try:
                 self._psiLCFS = np.zeros(self._time.size)
-            # try:
-            #     psiLCFSNode = self._MDSTree.get(r'tcv_eq("psi_surf","liuqe.m")')
-            #     self._psiLCFS = psiLCFSNode.data()/(2*scipy.pi)
-                self._defaultUnits['_psiLCFS'] = 'Wb'
+                # try:
+                #     psiLCFSNode = self._MDSTree.get(r'tcv_eq("psi_surf","liuqe.m")')
+                #     self._psiLCFS = psiLCFSNode.data()/(2*scipy.pi)
+                self._defaultUnits["_psiLCFS"] = "Wb"
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         return self._psiLCFS.copy()
 
     # ---  8
@@ -387,12 +408,13 @@ class TCVLIUQEMATTree(Equilibrium):
                 volnode = self._MDSTree.get(r'tcv_eq("vol","liuqe.m")')
                 self._fluxVol = volnode.data()
                 # Units aren't properly stored in the tree for this one!
-                self._defaultUnits['_fluxVol'] = 'm^3'
+                self._defaultUnits["_fluxVol"] = "m^3"
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         # Default units are m^3, but aren't stored in the tree!
         unit_factor = self._getLengthConversionFactor(
-            self._defaultUnits['_fluxVol'], length_unit)
+            self._defaultUnits["_fluxVol"], length_unit
+        )
         return unit_factor * self._fluxVol.copy()
 
     # ---  9
@@ -413,12 +435,13 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 volLCFSNode = self._MDSTree.get(r'tcv_eq("vol_edge","liuqe.m")')
                 self._volLCFS = volLCFSNode.data()
-                self._defaultUnits['_volLCFS'] = 'm^3'
+                self._defaultUnits["_volLCFS"] = "m^3"
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         # Default units should be 'cm^3':
         unit_factor = self._getLengthConversionFactor(
-            self._defaultUnits['_volLCFS'], length_unit)
+            self._defaultUnits["_volLCFS"], length_unit
+        )
         return unit_factor * self._volLCFS.copy()
 
     # ---  10
@@ -441,14 +464,15 @@ class TCVLIUQEMATTree(Equilibrium):
                 RmidPsiNode = self._MDSTree.get(r'tcv_eq("r_out","liuqe.m")')
                 self._RmidPsi = RmidPsiNode.data()
                 # Units aren't properly stored in the tree for this one!
-                if RmidPsiNode.units != ' ':
-                    self._defaultUnits['_RmidPsi'] = str(RmidPsiNode.units)
+                if RmidPsiNode.units != " ":
+                    self._defaultUnits["_RmidPsi"] = str(RmidPsiNode.units)
                 else:
-                    self._defaultUnits['_RmidPsi'] = 'm'
+                    self._defaultUnits["_RmidPsi"] = "m"
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
-            self._defaultUnits['_RmidPsi'], length_unit)
+            self._defaultUnits["_RmidPsi"], length_unit
+        )
         return unit_factor * self._RmidPsi.copy()
 
     # ---  11
@@ -465,11 +489,12 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 RLCFSNode = self._MDSTree.get(r'tcv_eq("r_edge","liuqe.m")')
                 self._RLCFS = RLCFSNode.data()
-                self._defaultUnits['_RLCFS'] = 'm'
+                self._defaultUnits["_RLCFS"] = "m"
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
-            self._defaultUnits['_RLCFS'], length_unit)
+            self._defaultUnits["_RLCFS"], length_unit
+        )
         return unit_factor * self._RLCFS.copy()
 
     # ---  12
@@ -486,11 +511,12 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 ZLCFSNode = self._MDSTree.get(r'tcv_eq("z_edge","liuqe.m")')
                 self._ZLCFS = ZLCFSNode.data()
-                self._defaultUnits['_ZLCFS'] = 'm'
+                self._defaultUnits["_ZLCFS"] = "m"
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
-            self._defaultUnits['_ZLCFS'], length_unit)
+            self._defaultUnits["_ZLCFS"], length_unit
+        )
         return unit_factor * self._ZLCFS.copy()
 
     # ---  13
@@ -508,9 +534,9 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 fluxFfnode = self._MDSTree.get(r'tcv_eq("rbtor_rho","liuqe.m")')
                 self._fpol = fluxFfnode.data()
-                self._defaultUnits['_fpol'] = 'T*m'
+                self._defaultUnits["_fpol"] = "T*m"
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         return self._fpol.copy()
 
     # ---  14
@@ -527,9 +553,9 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 fluxPPresNode = self._MDSTree(r'tcv_eq("p_rho","liuqe.m")')
                 self._fluxPres = fluxPPresNode.data()
-                self._defaultUnits['_fluxPres'] = 'Pa'
+                self._defaultUnits["_fluxPres"] = "Pa"
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         return self._fluxPres.copy()
 
     # ---  15
@@ -547,9 +573,9 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 fluxFFNode = self._MDSTree.get(r'tcv_eq("ttprime_rho","liuqe.m")')
                 self._ffprim = fluxFFnode.data()
-                self._defaultUnits['_ffprim'] = 'T*m^4'
+                self._defaultUnits["_ffprim"] = "T*m^4"
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         return self._ffprim.copy()
 
     # ---  16
@@ -574,9 +600,9 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 fluxPPresNode = self._MDSTree.get(r'tcv_eq("pprime_rho","liuqe.m")')
                 self._pprime = fluxPPresNode.data()
-                self._defaultUnits['_fluxPres'] = 'Pa/Wb'
+                self._defaultUnits["_fluxPres"] = "Pa/Wb"
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         return self._pprime.copy()
 
     # ---  17
@@ -593,9 +619,9 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 kappaNode = self._MDSTree.get(r'tcv_eq("kappa_edge","liuqe.m")')
                 self._kappa = kappaNode.data()
-                self._defaultUnits['_kappa'] = ' '
+                self._defaultUnits["_kappa"] = " "
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         return self._kappa.copy()
 
     # ---  18
@@ -612,9 +638,9 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 dupperNode = self._MDSTree.get(r'tcv_eq("delta_ed_top","liuqe.m")')
                 self._dupper = dupperNode.data()
-                self._defaultUnits['_dupper'] = str(dupperNode.units)
+                self._defaultUnits["_dupper"] = str(dupperNode.units)
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         return self._dupper.copy()
 
     # ---  19
@@ -631,9 +657,9 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 dlowerNode = self._MDSTree.get(r'tcv_eq("delta_ed_bot","liuqe.m")')
                 self._dlower = dlowerNode.data()
-                self._defaultUnits['_dlower'] = str(dlowerNode.units)
+                self._defaultUnits["_dlower"] = str(dlowerNode.units)
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         return self._dlower.copy()
 
     # ---  21
@@ -650,11 +676,12 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 rmagNode = self._MDSTree.get(r'tcv_eq("r_axis","liuqe.m")')
                 self._rmag = rmagNode.data()
-                self._defaultUnits['_rmag'] = 'm'
+                self._defaultUnits["_rmag"] = "m"
             except (TreeException, AttributeError):
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
-            self._defaultUnits['_rmag'], length_unit)
+            self._defaultUnits["_rmag"], length_unit
+        )
         return unit_factor * self._rmag.copy()
 
     # ---  22
@@ -671,11 +698,12 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 zmagNode = self._MDSTree.get(r'tcv_eq("z_axis","liuqe.m")')
                 self._zmag = zmagNode.data()
-                self._defaultUnits['_zmag'] = 'm'
+                self._defaultUnits["_zmag"] = "m"
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
-            self._defaultUnits['_zmag'], length_unit)
+            self._defaultUnits["_zmag"], length_unit
+        )
         return unit_factor * self._zmag.copy()
 
     # ---  23
@@ -696,12 +724,13 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 areaLCFSNode = self._MDSTree.get(r'tcv_eq("area_edge","liuqe.m")')
                 self._areaLCFS = areaLCFSNode.data()
-                self._defaultUnits['_areaLCFS'] = 'm^2'
+                self._defaultUnits["_areaLCFS"] = "m^2"
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         # Units should be cm^2:
         unit_factor = self._getLengthConversionFactor(
-            self._defaultUnits['_areaLCFS'], length_unit)
+            self._defaultUnits["_areaLCFS"], length_unit
+        )
         return unit_factor * self._areaLCFS.copy()
 
     # ---  24
@@ -729,13 +758,14 @@ class TCVLIUQEMATTree(Equilibrium):
                 _dummy = self._MDSTree.get(r'tcv_eq("r_out_mid","liuqe.m")')
                 # remember that it is the minor Radius and
                 # getRmidPsi() give the absolute value
-                RMaj = 0.88/0.996
+                RMaj = 0.88 / 0.996
                 self._aLCFS = _dummy.data()[:, _dummy.data().shape[1] - 1] - RMaj
-                self._defaultUnits['_aLCFS']='m'
+                self._defaultUnits["_aLCFS"] = "m"
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
-            self._defaultUnits['_aLCFS'], length_unit)
+            self._defaultUnits["_aLCFS"], length_unit
+        )
         return unit_factor * self._aLCFS.copy()
 
     # ---  25
@@ -758,15 +788,16 @@ class TCVLIUQEMATTree(Equilibrium):
                 # we compute this by adding the Major radius
                 # of the machine to the computed AOut()
                 # almost 0.88
-                RMaj = 0.88/0.996
-                self._RmidLCFS = self.getAOut()+RMaj
+                RMaj = 0.88 / 0.996
+                self._RmidLCFS = self.getAOut() + RMaj
                 # The units aren't properly stored in the tree for this one!
                 # Should be meters.
-                self._defaultUnits['_RmidLCFS'] = 'm'
+                self._defaultUnits["_RmidLCFS"] = "m"
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
-            self._defaultUnits['_RmidLCFS'], length_unit)
+            self._defaultUnits["_RmidLCFS"], length_unit
+        )
         return unit_factor * self._RmidLCFS.copy()
 
     # ---  27
@@ -783,9 +814,9 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 qpsiNode = self._MDSTree.get(r'tcv_eq("q","liuqe.m")')
                 self._qpsi = qpsiNode.data()
-                self._defaultUnits['_qpsi'] = str(qpsiNode.units)
+                self._defaultUnits["_qpsi"] = str(qpsiNode.units)
             except TreeException:
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         return self._qpsi.copy()
 
     # ---  28
@@ -802,9 +833,9 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 q0Node = self._MDSTree.get(r'tcv_eq("q_axis","liuqe.m")')
                 self._q0 = q0Node.data()
-                self._defaultUnits['_q0'] = str(q0Node.units)
+                self._defaultUnits["_q0"] = str(q0Node.units)
             except (TreeException, AttributeError):
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         return self._q0.copy()
 
     # ---  29
@@ -821,9 +852,9 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 q95Node = self._MDSTree.get(r'tcv_eq("q_95","liuqe.m")')
                 self._q95 = q95Node.data()
-                self._defaultUnits['_q95'] = str(q95Node.units)
+                self._defaultUnits["_q95"] = str(q95Node.units)
             except (TreeException, AttributeError):
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         return self._q95.copy()
 
     # ---  30
@@ -840,9 +871,9 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 qLCFSNode = self._MDSTree.get(r'tcv_eq("q_edge","liuqe.m")')
                 self._qLCFS = qLCFSNode.data()
-                self._defaultUnits['_qLCFS'] = str(qLCFSNode.units)
+                self._defaultUnits["_qLCFS"] = str(qLCFSNode.units)
             except (TreeException, AttributeError):
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         return self._qLCFS.copy()
 
     # ---  31
@@ -956,13 +987,13 @@ class TCVLIUQEMATTree(Equilibrium):
         """
         if self._btaxv is None:
             try:
-                RMaj = 0.88/0.996
-                bt = self._MDSTree.get('tcv_eq("BZERO")').data()/RMaj
+                RMaj = 0.88 / 0.996
+                bt = self._MDSTree.get('tcv_eq("BZERO")').data() / RMaj
                 btTime = self._MDSTree.get('dim_of(tcv_eq("BZERO"))').data()
                 self._btaxv = scipy.interp(self.getTimeBase(), btTime, bt)
-                self._defaultUnits['_btaxv'] = 'T'
+                self._defaultUnits["_btaxv"] = "T"
             except (TreeException, AttributeError):
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         return self._btaxv.copy()
 
     # ---  36
@@ -984,7 +1015,7 @@ class TCVLIUQEMATTree(Equilibrium):
         #     except (TreeException,AttributeError):
         #         raise ValueError('data retrieval failed.')
         # return self._btaxp.copy()
-        
+
     # ---  39
     def getIpCalc(self):
         """returns EFIT-calculated plasma current.
@@ -999,11 +1030,11 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 IpCalcNode = self._MDSTree.get('tcv_eq("i_p","liuqe.m")')
                 self._IpCalc = IpCalcNode.data()
-                self._defaultUnits['_IpCalc'] = str(IpCalcNode.units)
-            except (TreeException,AttributeError):
-                raise ValueError('data retrieval failed.')
+                self._defaultUnits["_IpCalc"] = str(IpCalcNode.units)
+            except (TreeException, AttributeError):
+                raise ValueError("data retrieval failed.")
         return self._IpCalc.copy()
-        
+
     # ---  40
     def getIpMeas(self):
         """returns magnetics-measured plasma current.
@@ -1021,13 +1052,15 @@ class TCVLIUQEMATTree(Equilibrium):
                 # ip = conn.get('tcv_ip()').data()
                 # ipTime = conn.get('dim_of(tcv_ip())').data()
                 # conn.closeTree(self._tree, self._shot)
-                ipNode = self._MDSTree.get(r'\magnetics::iplasma:trapeze')
+                ipNode = self._MDSTree.get(r"\magnetics::iplasma:trapeze")
                 ip = ipNode.data()
-                ipTime = self._MDSTree.get(r'dim_of(\magnetics::iplasma:trapeze)').data()
+                ipTime = self._MDSTree.get(
+                    r"dim_of(\magnetics::iplasma:trapeze)"
+                ).data()
                 self._IpMeas = scipy.interp(self.getTimeBase(), ipTime, ip)
-                self._defaultUnits['_IpMeas'] = 'A'
+                self._defaultUnits["_IpMeas"] = "A"
             except (TreeException, AttributeError):
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         return self._IpMeas.copy()
 
     # ---  42
@@ -1044,9 +1077,9 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 betatNode = self._MDSTree.get('tcv_eq("beta_tor","liuqe.m")')
                 self._betat = betatNode.data()
-                self._defaultUnits['_betat'] = str(betatNode.units)
+                self._defaultUnits["_betat"] = str(betatNode.units)
             except (TreeException, AttributeError):
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         return self._betat.copy()
 
     # ---  43
@@ -1063,9 +1096,9 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 betapNode = self._MDSTree.get('tcv_eq("beta_pol","liuqe.m")')
                 self._betap = betapNode.data()
-                self._defaultUnits['_betap'] = str(betapNode.units)
+                self._defaultUnits["_betap"] = str(betapNode.units)
             except (TreeException, AttributeError):
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         return self._betap.copy()
 
     # ---  44
@@ -1083,9 +1116,9 @@ class TCVLIUQEMATTree(Equilibrium):
                 LiNode = self._MDSTree.get('tcv_eq("l_i_3","liuqe.m")')
 
                 self._Li = LiNode.data()
-                self._defaultUnits['_Li'] = str(LiNode.units)
+                self._defaultUnits["_Li"] = str(LiNode.units)
             except (TreeException, AttributeError):
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         return self._Li.copy()
 
     # ---  45
@@ -1102,10 +1135,10 @@ class TCVLIUQEMATTree(Equilibrium):
             betat = self.getBetaT()
             betap = self.getBetaP()
             Li = self.getLi()
-            data = namedtuple('Betas', ['betat', 'betap', 'Li'])
+            data = namedtuple("Betas", ["betat", "betap", "Li"])
             return data(betat=betat, betap=betap, Li=Li)
         except ValueError:
-            raise ValueError('data retrieval failed.')
+            raise ValueError("data retrieval failed.")
 
     # ---  50
     # def getDiamagWp(self):
@@ -1140,9 +1173,9 @@ class TCVLIUQEMATTree(Equilibrium):
             try:
                 WMHDNode = elf._Connection.get('tcv_eq("w_mhd","liuqe.m")')
                 self._WMHD = WMHDNode.data()
-                self._defaultUnits['_WMHD'] = str(WMHDNode.units)
+                self._defaultUnits["_WMHD"] = str(WMHDNode.units)
             except (TreeException, AttributeError):
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
         return self._WMHD.copy()
 
     # ---  53
@@ -1177,9 +1210,9 @@ class TCVLIUQEMATTree(Equilibrium):
         if self._BCentr is None:
             try:
                 self._BCentr = self.getBtVac() * self.getRCentr()
-                self._defaultUnits['_btaxv'] = 'T'
+                self._defaultUnits["_btaxv"] = "T"
             except (TreeException, AttributeError):
-                raise ValueError('data retrieval failed.')
+                raise ValueError("data retrieval failed.")
 
         return self._BCentr
 
@@ -1190,8 +1223,8 @@ class TCVLIUQEMATTree(Equilibrium):
             R: Radial position where Bcent calculated [m]
         """
         if self._RCentr is None:
-            self._RCentr =  0.88/0.996 #Hardcoded from MAI file description of BTF
-            self._defaultUnits['_RCentr'] = 'm'
+            self._RCentr = 0.88 / 0.996  # Hardcoded from MAI file description of BTF
+            self._defaultUnits["_RCentr"] = "m"
         return self._RCentr
 
     # ---  59
@@ -1213,9 +1246,9 @@ class TCVLIUQEMATTree(Equilibrium):
             self._Rlimiter = self._MDSTree.get('static("r_t")').data()
             self._Zlimiter = self._MDSTree.get('static("z_t")').data()
         except MDSplus._treeshr.TreeException:
-            raise ValueError('data load failed.')
+            raise ValueError("data load failed.")
 
-        return (self._Rlimiter,self._Zlimiter)
+        return (self._Rlimiter, self._Zlimiter)
 
     # ---  60
     def getMachineCrossSectionPatch(self):
@@ -1236,7 +1269,7 @@ class TCVLIUQEMATTree(Equilibrium):
             Zv_in = self._MDSTree.get('static("z_v:in")').data()
             Zv_out = self._MDSTree.get('static("z_v:out")').data()
         except MDSplus._treeshr.TreeException:
-            raise ValueError('data load failed.')
+            raise ValueError("data load failed.")
 
         # this is for the vessel
         verticesIn = [r for r in zip(Rv_in, Zv_in)]
@@ -1246,21 +1279,23 @@ class TCVLIUQEMATTree(Equilibrium):
         verticesOut.append(verticesOut[0])
         codesOut = [Path.MOVETO] + (len(verticesOut) - 1) * [Path.LINETO]
         vessel_path = Path(verticesIn + verticesOut, codesIn + codesOut)
-        vessel_patch = PathPatch(vessel_path, facecolor=(0.6, 0.6, 0.6),
-                                 edgecolor='black')
+        vessel_patch = PathPatch(
+            vessel_path, facecolor=(0.6, 0.6, 0.6), edgecolor="black"
+        )
         # this is for the tiles
         x, y = self.getMachineCrossSection()
-        verticesIn = [r for r in zip(x, y)][::- 1]
+        verticesIn = [r for r in zip(x, y)][::-1]
         verticesIn.append(verticesIn[0])
-        codesIn = [Path.MOVETO] + (len(verticesIn)-1) * [Path.LINETO]
+        codesIn = [Path.MOVETO] + (len(verticesIn) - 1) * [Path.LINETO]
         verticesOut = [r for r in zip(Rv_in, Zv_in)]
         verticesOut.append(verticesOut[0])
         codesOut = [Path.MOVETO] + (len(verticesOut) - 1) * [Path.LINETO]
         tiles_path = Path(verticesIn + verticesOut, codesIn + codesOut)
-        tiles_patch = PathPatch(tiles_path, facecolor=(0.75, 0.75, 0.75),
-                                edgecolor='black')
+        tiles_patch = PathPatch(
+            tiles_path, facecolor=(0.75, 0.75, 0.75), edgecolor="black"
+        )
 
-        return (tiles_patch , vessel_patch)
+        return (tiles_patch, vessel_patch)
 
     # ---  61
     def plotFlux(self, fill=True, mask=False):
@@ -1276,19 +1311,19 @@ class TCVLIUQEMATTree(Equilibrium):
         """
         try:
             psiRZ = self.getFluxGrid()
-            rGrid = self.getRGrid(length_unit='m')
-            zGrid = self.getZGrid(length_unit='m')
+            rGrid = self.getRGrid(length_unit="m")
+            zGrid = self.getZGrid(length_unit="m")
             t = self.getTimeBase()
 
-            RLCFS = self.getRLCFS(length_unit='m')
-            ZLCFS = self.getZLCFS(length_unit='m')
+            RLCFS = self.getRLCFS(length_unit="m")
+            ZLCFS = self.getZLCFS(length_unit="m")
         except ValueError:
-            raise AttributeError('cannot plot EFIT flux map.')
+            raise AttributeError("cannot plot EFIT flux map.")
         try:
             limx, limy = self.getMachineCrossSection()
         except NotImplementedError:
             if self._verbose:
-                print('No machine cross-section implemented!')
+                print("No machine cross-section implemented!")
             limx = None
             limy = None
         try:
@@ -1302,50 +1337,54 @@ class TCVLIUQEMATTree(Equilibrium):
         # to update as masked argument using lambda function
         # lambda evt: arrow_respond(my_slider,evt)
         def arrowRespond(slider, event):
-            if event.key == 'right':
-                slider.set_val(min(slider.val+1, slider.valmax))
-            if event.key == 'left':
-                slider.set_val(max(slider.val-1, slider.valmin))
+            if event.key == "right":
+                slider.set_val(min(slider.val + 1, slider.valmax))
+            if event.key == "left":
+                slider.set_val(max(slider.val - 1, slider.valmin))
 
         # make time-slice window
         fluxPlot = plt.figure(figsize=(6, 11))
         gs = mplgs.GridSpec(2, 1, height_ratios=[30, 1])
-        psi = fluxPlot.add_subplot(gs[0,0])
-        psi.set_aspect('equal')
+        psi = fluxPlot.add_subplot(gs[0, 0])
+        psi.set_aspect("equal")
         try:
             tilesP, vesselP = self.getMachineCrossSectionPatch()
             psi.add_patch(tilesP)
             psi.add_patch(vesselP)
         except NotImplementedError:
             if self._verbose:
-                print('No machine cross-section implemented!')
+                print("No machine cross-section implemented!")
         psi.set_xlim([0.6, 1.2])
         psi.set_ylim([-0.8, 0.8])
 
         timeSliderSub = fluxPlot.add_subplot(gs[1, 0])
-        title = fluxPlot.suptitle('')
+        title = fluxPlot.suptitle("")
 
         # dummy plot to get x,ylims
-        psi.contour(rGrid, zGrid, psiRZ[0], 10, colors='k')
+        psi.contour(rGrid, zGrid, psiRZ[0], 10, colors="k")
 
         # generate graphical mask for limiter wall
         if mask:
             xlim = psi.get_xlim()
             ylim = psi.get_ylim()
-            bound_verts = [(xlim[0], ylim[0]), (xlim[0], ylim[1]),
-                           (xlim[1], ylim[1]), (xlim[1], ylim[0]),
-                           (xlim[0], ylim[0])]
-            poly_verts = [(limx[i], limy[i]) for i in
-                          range(len(limx) - 1, -1, -1)]
+            bound_verts = [
+                (xlim[0], ylim[0]),
+                (xlim[0], ylim[1]),
+                (xlim[1], ylim[1]),
+                (xlim[1], ylim[0]),
+                (xlim[0], ylim[0]),
+            ]
+            poly_verts = [(limx[i], limy[i]) for i in range(len(limx) - 1, -1, -1)]
 
-            bound_codes = [mpath.Path.MOVETO] + (len(bound_verts) - 1) * [mpath.Path.LINETO]
-            poly_codes = [mpath.Path.MOVETO] + (len(poly_verts) - 1) * [mpath.Path.LINETO]
+            bound_codes = [mpath.Path.MOVETO] + (len(bound_verts) - 1) * [
+                mpath.Path.LINETO
+            ]
+            poly_codes = [mpath.Path.MOVETO] + (len(poly_verts) - 1) * [
+                mpath.Path.LINETO
+            ]
 
-            path = mpath.Path(bound_verts + poly_verts,
-                              bound_codes + poly_codes)
-            patch = mpatches.PathPatch(path,
-                                       facecolor='white',
-                                       edgecolor='none')
+            path = mpath.Path(bound_verts + poly_verts, bound_codes + poly_codes)
+            patch = mpatches.PathPatch(path, facecolor="white", edgecolor="none")
 
         def updateTime(val):
             psi.clear()
@@ -1354,23 +1393,33 @@ class TCVLIUQEMATTree(Equilibrium):
             psi.set_xlim([0.5, 1.2])
             psi.set_ylim([-0.8, 0.8])
 
-            title.set_text('LIUQE Reconstruction, $t = %(t).2f$ s' % {'t':t[t_idx]})
-            psi.set_xlabel('$R$ [m]')
-            psi.set_ylabel('$Z$ [m]')
+            title.set_text("LIUQE Reconstruction, $t = %(t).2f$ s" % {"t": t[t_idx]})
+            psi.set_xlabel("$R$ [m]")
+            psi.set_ylabel("$Z$ [m]")
             if macx is not None:
-                psi.plot(macx, macy, 'k', linewidth=3, zorder=5)
+                psi.plot(macx, macy, "k", linewidth=3, zorder=5)
             elif limx is not None:
-                psi.plot(limx,limy,'k',linewidth=3,zorder=5)
+                psi.plot(limx, limy, "k", linewidth=3, zorder=5)
             # catch NaNs separating disjoint sections of R,ZLCFS in mask
-            maskarr = scipy.where(scipy.logical_or(RLCFS[t_idx] > 0.0,scipy.isnan(RLCFS[t_idx])))
-            RLCFSframe = RLCFS[t_idx,maskarr[0]]
-            ZLCFSframe = ZLCFS[t_idx,maskarr[0]]
-            psi.plot(RLCFSframe,ZLCFSframe,'r',linewidth=3,zorder=3)
+            maskarr = scipy.where(
+                scipy.logical_or(RLCFS[t_idx] > 0.0, scipy.isnan(RLCFS[t_idx]))
+            )
+            RLCFSframe = RLCFS[t_idx, maskarr[0]]
+            ZLCFSframe = ZLCFS[t_idx, maskarr[0]]
+            psi.plot(RLCFSframe, ZLCFSframe, "r", linewidth=3, zorder=3)
             if fill:
-                psi.contourf(rGrid,zGrid,psiRZ[t_idx],50,zorder=2)
-                psi.contour(rGrid,zGrid,psiRZ[t_idx],50,colors='k',linestyles='solid',zorder=3)
+                psi.contourf(rGrid, zGrid, psiRZ[t_idx], 50, zorder=2)
+                psi.contour(
+                    rGrid,
+                    zGrid,
+                    psiRZ[t_idx],
+                    50,
+                    colors="k",
+                    linestyles="solid",
+                    zorder=3,
+                )
             else:
-                psi.contour(rGrid,zGrid,psiRZ[t_idx],50,colors='k')
+                psi.contour(rGrid, zGrid, psiRZ[t_idx], 50, colors="k")
             if mask:
                 patchdraw = psi.add_patch(patch)
                 patchdraw.set_zorder(4)
@@ -1382,7 +1431,9 @@ class TCVLIUQEMATTree(Equilibrium):
 
             fluxPlot.canvas.draw()
 
-        timeSlider = mplw.Slider(timeSliderSub,'t index',0,len(t)-1,valinit=0,valfmt="%d")
+        timeSlider = mplw.Slider(
+            timeSliderSub, "t index", 0, len(t) - 1, valinit=0, valfmt="%d"
+        )
         timeSlider.on_changed(updateTime)
         updateTime(0)
 
@@ -1405,4 +1456,5 @@ class TCVLIUQEMATTreeProp(TCVLIUQEMATTree, PropertyAccessMixin):
     """TCVLIUQETree with the PropertyAccessMixin added to enable property-style
     access. This is good for interactive use, but may drag the performance down.
     """
+
     pass
