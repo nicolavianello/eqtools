@@ -821,7 +821,7 @@ class JETSALData(Equilibrium):
         Raises:
             NotImplementedError: Not implemented on ASDEX-Upgrade reconstructions.
         """
-        if self._RmidOUT is None:
+        if self._RmidLCFS is None:
             try:
                 _RmidOut = sal.get(
                     self._DATA_PATH.format(
@@ -830,14 +830,14 @@ class JETSALData(Equilibrium):
                 )
                 # The units aren't properly stored in the tree for this one!
                 # Should be meters.
-                self._RmidOUT = _RmidOut.data
+                self._RmidLCFS = _RmidOut.data
                 self._defaultUnits["_RmidOUT"] = "m"
             except SALException:
                 raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
             self._defaultUnits["_RmidOUT"], length_unit
         )
-        return unit_factor * self._RmidOUT.copy()
+        return unit_factor * self._RmidLCFS.copy()
 
     def getGeometry(self, length_unit=None):
         """pulls dimensional geometry parameters.
