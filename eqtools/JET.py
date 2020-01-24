@@ -825,12 +825,12 @@ class JETSALData(Equilibrium):
             try:
                 _RmidOut = sal.get(
                     self._DATA_PATH.format(
-                        self._shot, self.user, self.dda, "rmj0", self.sequence
+                        self._shot, self.user, self.dda, "rmjo", self.sequence
                     )
                 )
                 # The units aren't properly stored in the tree for this one!
                 # Should be meters.
-                self._RmidLCFS = _RmidOut.data
+                self._RmidLCFS = _RmidOut.data[:, -1]
                 self._defaultUnits["_RmidOUT"] = "m"
             except SALException:
                 raise ValueError("data retrieval failed.")
