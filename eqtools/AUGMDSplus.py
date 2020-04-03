@@ -133,32 +133,29 @@ class AUGMDSTree(Equilibrium):
         server="localhost:8000",
     ):
 
-        if not _has_dd:
-            print("dd module did not load properly")
-            print("Most functionality will not be available!")
-
         super(AUGMDSTree, self).__init__(
             length_unit=length_unit, tspline=tspline, monotonic=monotonic
         )
 
         self.server = server
         self._shot = shot
-        self._tree = shotfile
+        self._tree = tree
+        self._edition = 0
+        self._experiment = experiment
         print(self._shot, self._tree, edition, experiment)
         self._MDSTree = MDSplus.Connection(self.server)
-        # try:
-        #     if shotfile2 is None:
-        #         shotfile2 = self._relatedSVFile[self._tree]
-        #
-        #     # Overwrite getSSQ with a shotfile with same capabilities
-        #     self.getSSQ = dd.shotfile(
-        #         shotfile2, self._shot, edition=edition, experiment=experiment
-        #     )
-        # except (KeyError, PyddError):
-        #     warnings.warn(
-        #         "Companion SV not valid, extracting from " + self._tree + ":SSQ",
-        #         RuntimeWarning,
-        #     )
+        try:
+            if shotfile2 is None:
+                self.shotfile2 = self._relatedSVFile[self._tree]
+            # Overwrite getSSQ with a shotfile with same capabilities
+            # self.getSSQ = dd.shotfile(
+            #     shotfile2, self._shot, edition=edition, experiment=experiment
+            # )
+        except (KeyError, PyddError):
+            warnings.warn(
+                "Companion SV not valid, extracting from " + self._tree + ":SSQ",
+                RuntimeWarning,
+            )
 
         self._defaultUnits = {}
 
@@ -256,19 +253,25 @@ class AUGMDSTree(Equilibrium):
         self.getVolLCFS()  # check
         self.getQProfile()  #
 
-    def _mdsaugdiag(self, shotfile, experiment, signal, edition):
-        """ wrapper for the augdiag TDI function"""
+    def _mdsaugdiag(self, shotfile, signal):
+        """ wrapper for the augdiag TDI function data"""
 
         # augdiag (_shot, _diag, _signame, _experiment, _edition, _t1, _t2, _oshot, _oedition)
         _s = (
-            "augdiag({},".format(shot)
+            'augdiag({},'.format(self._shot)
             + '"' + shotfile
             + '","'
             + signal
-            + '",{},'.format(edition)
+            + '","' + self._experiment
+            + '",{}'.format(self._edition)
             + ")"
         )
-        return self._MDSTree.get(_s).data()
+        return self._MDSTree.getObject(_s)
+
+    def _mdsaugdimension(self, shotfile, signal, dimension):
+        """ wrapper for the augdiag TDI function data time"""
+        _object = self._mdsaugdiag(shotfile,signal)
+        return _object.getDimensionAt(dimension).data()
 
 
     # def __str__(self):
@@ -337,9 +340,9 @@ class AUGMDSTree(Equilibrium):
         """
         if self._time is None:
             try:
-                timeNode = self._MDSTree.get(r"")
-                self._time = timeNode.data
-                self._defaultUnits["_time"] = str(timeNode.unit)
+                timeNode = self._mdsaugdiag(self._tree,'time')
+                self._time = timeNode.data()
+                self._defaultUnits["_time"] = str(timeNode.units)
             except PyddError:
                 raise ValueError("data retrieval failed.")
         return self._time.copy()
@@ -357,23 +360,19 @@ class AUGMDSTree(Equilibrium):
         """
         if self._psiRZ is None:
             try:
-                psinode = self._MDSTree("Ri")
-                self._rGrid = psinode.data[
+                psinode = self._mdsaugdiag(self._tree,'Ri')
+                self._rGrid = psinode.data()[:,
                     0
                 ]  # assumes data from first is correct (WHY IS IT EVEN DUPICATED???)
-                self._defaultUnits["_rGrid"] = str(psinode.unit)
+                self._defaultUnits["_rGrid"] = str(psinode.units)
                 psinode = self._MDSTree("Zj")
-                self._zGrid = psinode.data[0]
-                self._defaultUnits["_zGrid"] = str(psinode.unit)
-                psinode = self._MDSTree(
-                    "PFM", calibrated=False
-                )  # calibrated signal causes seg faults (SERIOUSLY WHAT THE FUCK ASDEX)
-                self._psiRZ = psinode.data[
-                    : self._timeidxend, : len(self._zGrid), : len(self._rGrid)
-                ]
+                self._zGrid = psinode.data()[:, 0]
+                self._defaultUnits["_zGrid"] = str(psinode.units)
+                psinode = self._mdsaugdiag(self._tree,'PFM')
+                self._psiRZ = np.rollaxis(psinode.data(),2,0)
                 self._defaultUnits["_psiRZ"] = "Vs"  # HARDCODED DUE TO CALIBRATED=FALSE
 
-            except PyddError:
+            except:
                 raise ValueError("data retrieval failed.")
         return self._psiRZ.copy()
 
@@ -424,10 +423,10 @@ class AUGMDSTree(Equilibrium):
         """
         if self._psiAxis is None:
             try:
-                psiAxisNode = self._MDSTree("PFxx")
-                self._psiAxis = psiAxisNode.data[: self._timeidxend, 0]
-                self._defaultUnits["_psiAxis"] = str(psiAxisNode.unit)
-            except PyddError:
+                psiAxisNode = self._mdsaugdiag(self._tree,"PFxx")
+                self._psiAxis = psiAxisNode.data()[0,:]
+                self._defaultUnits["_psiAxis"] = str(psiAxisNode.units)
+            except:
                 raise ValueError("data retrieval failed.")
         return self._psiAxis.copy()
 
@@ -442,10 +441,10 @@ class AUGMDSTree(Equilibrium):
         """
         if self._psiLCFS is None:
             try:
-                psiLCFSNode = self._MDSTree("PFL")
-                self._psiLCFS = psiLCFSNode.data[: self._timeidxend, 0]
-                self._defaultUnits["_psiLCFS"] = str(psiLCFSNode.unit)
-            except PyddError:
+                psiLCFSNode = self._mdsaugdiag(self._tree,"PFL")
+                self._psiLCFS = psiLCFSNode.data()[0, :]
+                self._defaultUnits["_psiLCFS"] = str(psiLCFSNode.units)
+            except:
                 raise ValueError("data retrieval failed.")
         return self._psiLCFS.copy()
 
@@ -464,11 +463,11 @@ class AUGMDSTree(Equilibrium):
         """
         if self._fluxVol is None:
             try:
-                fluxVolNode = self._MDSTree(
-                    "Vol"
+                fluxVolNode = self._mdsaugdiag(
+                    self._tree, "Vol"
                 )  # Lpf is unreliable so I have to do this trick....
                 temp = (
-                    scipy.where(scipy.sum(fluxVolNode.data, axis=0)[::2] != 0)[0].max()
+                    scipy.where(scipy.sum(fluxVolNode.data(), axis=1)[::2] != 0)[0].max()
                     + 1
                 )  # Find the where the volume is non-zero, give the maximum index and add one (for the core value)
 
@@ -481,7 +480,7 @@ class AUGMDSTree(Equilibrium):
                     self._defaultUnits["_fluxVol"] = str(fluxVolNode.unit)
                 else:
                     self._defaultUnits["_fluxVol"] = "m^3"
-            except PyddError:
+            except:
                 raise ValueError("data retrieval failed.")
         # Default units are m^3, but aren't stored in the tree!
         unit_factor = self._getLengthConversionFactor(
@@ -504,10 +503,10 @@ class AUGMDSTree(Equilibrium):
         """
         if self._volLCFS is None:
             try:
-                volLCFSNode = self._MDSTree("Vol")
-                self._volLCFS = volLCFSNode.data[: self._timeidxend, 0]
-                self._defaultUnits["_volLCFS"] = str(volLCFSNode.unit)
-            except PyddError:
+                volLCFSNode = self._mdsaugdiag(self._tree,"Vol")
+                self._volLCFS = volLCFSNode.data[0, : self._timeidxend]
+                self._defaultUnits["_volLCFS"] = str(volLCFSNode.units)
+            except:
                 raise ValueError("data retrieval failed.")
         # Default units should be 'cm^3':
         unit_factor = self._getLengthConversionFactor(

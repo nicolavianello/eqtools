@@ -356,7 +356,7 @@ class AUGDDData(Equilibrium):
                 self._psiRZ = psinode.data[
                     : self._timeidxend, : len(self._zGrid), : len(self._rGrid)
                 ]
-                self._defaultUnits["_psiRZ"] = "Vs"  # HARDCODED DUE TO CALIBRATED=FALSE
+                self._defaultUnits["_psiRZ"] = psi.units  # HARDCODED DUE TO CALIBRATED=FALSE
 
             except PyddError:
                 raise ValueError("data retrieval failed.")
