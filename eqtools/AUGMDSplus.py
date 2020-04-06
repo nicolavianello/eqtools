@@ -146,7 +146,7 @@ class AUGMDSTree(Equilibrium):
         self._MDSTree = MDSplus.Connection(self.server)
         try:
             if shotfile2 is None:
-                self.shotfile2 = self._relatedSVFile[self._tree]
+                self._treessq = self._relatedSVFile[self._tree]
             # Overwrite getSSQ with a shotfile with same capabilities
             # self.getSSQ = dd.shotfile(
             #     shotfile2, self._shot, edition=edition, experiment=experiment
@@ -258,11 +258,13 @@ class AUGMDSTree(Equilibrium):
 
         # augdiag (_shot, _diag, _signame, _experiment, _edition, _t1, _t2, _oshot, _oedition)
         _s = (
-            'augdiag({},'.format(self._shot)
-            + '"' + shotfile
+            "augdiag({},".format(self._shot)
+            + '"'
+            + shotfile
             + '","'
             + signal
-            + '","' + self._experiment
+            + '","'
+            + self._experiment
             + '",{}'.format(self._edition)
             + ")"
         )
@@ -270,9 +272,8 @@ class AUGMDSTree(Equilibrium):
 
     def _mdsaugdimension(self, shotfile, signal, dimension):
         """ wrapper for the augdiag TDI function data time"""
-        _object = self._mdsaugdiag(shotfile,signal)
+        _object = self._mdsaugdiag(shotfile, signal)
         return _object.getDimensionAt(dimension).data()
-
 
     # def __str__(self):
     #     """string formatting for ASDEX Upgrade Equilibrium class.
@@ -340,7 +341,7 @@ class AUGMDSTree(Equilibrium):
         """
         if self._time is None:
             try:
-                timeNode = self._mdsaugdiag(self._tree,'time')
+                timeNode = self._mdsaugdiag(self._tree, "time")
                 self._time = timeNode.data()
                 self._defaultUnits["_time"] = str(timeNode.units)
             except PyddError:
@@ -360,16 +361,16 @@ class AUGMDSTree(Equilibrium):
         """
         if self._psiRZ is None:
             try:
-                psinode = self._mdsaugdiag(self._tree,'Ri')
-                self._rGrid = psinode.data()[:,
-                    0
+                psinode = self._mdsaugdiag(self._tree, "Ri")
+                self._rGrid = psinode.data()[
+                    :, 0
                 ]  # assumes data from first is correct (WHY IS IT EVEN DUPICATED???)
                 self._defaultUnits["_rGrid"] = str(psinode.units)
                 psinode = self._MDSTree("Zj")
                 self._zGrid = psinode.data()[:, 0]
                 self._defaultUnits["_zGrid"] = str(psinode.units)
-                psinode = self._mdsaugdiag(self._tree,'PFM')
-                self._psiRZ = np.rollaxis(psinode.data(),2,0)
+                psinode = self._mdsaugdiag(self._tree, "PFM")
+                self._psiRZ = np.moveaxis(psinode.data(), -1, 0)
                 self._defaultUnits["_psiRZ"] = "Vs"  # HARDCODED DUE TO CALIBRATED=FALSE
 
             except:
@@ -423,8 +424,8 @@ class AUGMDSTree(Equilibrium):
         """
         if self._psiAxis is None:
             try:
-                psiAxisNode = self._mdsaugdiag(self._tree,"PFxx")
-                self._psiAxis = psiAxisNode.data()[0,:]
+                psiAxisNode = self._mdsaugdiag(self._tree, "PFxx")
+                self._psiAxis = psiAxisNode.data()[0, : self._timeidxend]
                 self._defaultUnits["_psiAxis"] = str(psiAxisNode.units)
             except:
                 raise ValueError("data retrieval failed.")
@@ -441,8 +442,8 @@ class AUGMDSTree(Equilibrium):
         """
         if self._psiLCFS is None:
             try:
-                psiLCFSNode = self._mdsaugdiag(self._tree,"PFL")
-                self._psiLCFS = psiLCFSNode.data()[0, :]
+                psiLCFSNode = self._mdsaugdiag(self._tree, "PFL")
+                self._psiLCFS = psiLCFSNode.data()[0, : self._timeidxend]
                 self._defaultUnits["_psiLCFS"] = str(psiLCFSNode.units)
             except:
                 raise ValueError("data retrieval failed.")
@@ -467,11 +468,10 @@ class AUGMDSTree(Equilibrium):
                     self._tree, "Vol"
                 )  # Lpf is unreliable so I have to do this trick....
                 temp = (
-                    scipy.where(scipy.sum(fluxVolNode.data(), axis=1)[::2] != 0)[0].max()
-                    + 1
+                    np.where(np.sum(fluxVolNode.data(), axis=1)[::2] != 0)[0].max() + 1
                 )  # Find the where the volume is non-zero, give the maximum index and add one (for the core value)
 
-                self._fluxVol = fluxVolNode.data[: self._timeidxend][
+                self._fluxVol = fluxVolNode.data().transpose()[: self._timeidxend][
                     :, : 2 * temp + 1 : 2
                 ][
                     :, ::-1
@@ -503,7 +503,7 @@ class AUGMDSTree(Equilibrium):
         """
         if self._volLCFS is None:
             try:
-                volLCFSNode = self._mdsaugdiag(self._tree,"Vol")
+                volLCFSNode = self._mdsaugdiag(self._tree, "Vol")
                 self._volLCFS = volLCFSNode.data[0, : self._timeidxend]
                 self._defaultUnits["_volLCFS"] = str(volLCFSNode.units)
             except:
@@ -541,19 +541,21 @@ class AUGMDSTree(Equilibrium):
         """
         if self._RLCFS is None:
             try:
-                rgeo = self.getSSQ("Rgeo")
-                RLCFSNode = self.getSSQ("rays")
-                RLCFStemp = scipy.hstack(
-                    (scipy.atleast_2d(RLCFSNode.data[:, -1]).T, RLCFSNode.data)
+                rgeo = self._mdsaugdiag(self._treessq, "Rgeo")
+                RLCFSNode = self._mdsaugdiag(self._treessq, "rays")
+                RLCFStemp = np.hstack(
+                    (
+                        np.atleast_2d(RLCFSNode.data().transpose()[:, -1]).T,
+                        RLCFSNode.data().transpose(),
+                    )
                 )
-                templen = RLCFSNode.data.shape
+                templen = RLCFSNode.data().transpose().shape
 
-                self._RLCFS = scipy.tile(
-                    rgeo.data, (templen[1] + 1, 1)
-                ).T + RLCFStemp * scipy.cos(
-                    scipy.tile(
-                        (scipy.linspace(0, 2 * scipy.pi, templen[1] + 1)),
-                        (templen[0], 1),
+                self._RLCFS = np.tile(
+                    rgeo.data(), (templen[1] + 1, 1)
+                ).T + RLCFStemp * np.cos(
+                    np.tile(
+                        (np.linspace(0, 2 * scipy.pi, templen[1] + 1)), (templen[0], 1),
                     )
                 )  # construct a 2d grid of angles, take cos, multiply by radius
                 self._defaultUnits["_RLCFS"] = str(RLCFSNode.unit)
@@ -579,19 +581,21 @@ class AUGMDSTree(Equilibrium):
         """
         if self._ZLCFS is None:
             try:
-                zgeo = self.getSSQ("Zgeo")
-                ZLCFSNode = self.getSSQ("rays")
-                ZLCFStemp = scipy.hstack(
-                    (scipy.atleast_2d(ZLCFSNode.data[:, -1]).T, ZLCFSNode.data)
+                zgeo = self._mdsaugdiag(self._treessq, "Zgeo")
+                ZLCFSNode = self._mdsaugdiag(self._treessq, "rays")
+                ZLCFStemp = np.hstack(
+                    (
+                        scipy.atleast_2d(ZLCFSNode.data().transpose()[:, -1]).T,
+                        ZLCFSNode.data().transpose(),
+                    )
                 )
-                templen = ZLCFSNode.data.shape
+                templen = ZLCFSNode.data().transpose().shape
 
-                self._ZLCFS = scipy.tile(
-                    zgeo.data, (templen[1] + 1, 1)
-                ).T + ZLCFStemp * scipy.sin(
-                    scipy.tile(
-                        (scipy.linspace(0, 2 * scipy.pi, templen[1] + 1)),
-                        (templen[0], 1),
+                self._ZLCFS = np.tile(
+                    zgeo.data(), (templen[1] + 1, 1)
+                ).T + ZLCFStemp * np.sin(
+                    np.tile(
+                        (np.linspace(0, 2 * np.pi, templen[1] + 1)), (templen[0], 1),
                     )
                 )  # construct a 2d grid of angles, take sin, multiply by radius
                 self._defaultUnits["_ZLCFS"] = str(ZLCFSNode.unit)
@@ -711,14 +715,17 @@ class AUGMDSTree(Equilibrium):
         """
         if self._fpol is None:
             try:
-                fNode = self._MDSTree(
-                    "Jpol"
+                fNode = self._mdsaugdiag(
+                    self._tree, "Jpol"
                 )  # From definition of F with poloidal current
                 self._fpol = (
-                    fNode.data[: self._timeidxend, : 2 * self._lpf : 2][::-1] * 2e-7
+                    fNode.data().transpose()[: self._timeidxend, : 2 * self._lpf : 2][
+                        ::-1
+                    ]
+                    * 2e-7
                 )
                 self._defaultUnits["_fpol"] = str("T m")
-            except PyddError:
+            except:
                 raise ValueError("data retrieval failed.")
         return self._fpol.copy()
 
@@ -733,14 +740,14 @@ class AUGMDSTree(Equilibrium):
         """
         if self._fluxPres is None:
             try:
-                fluxPresNode = self._MDSTree("Pres")
-                self._fluxPres = fluxPresNode.data[: self._timeidxend][
+                fluxPresNode = self._mdsaugdiag(self._tree, "Pres")
+                self._fluxPres = fluxPresNode.data().transpose()[: self._timeidxend][
                     :, : 2 * self._lpf : 2
                 ][
                     :, ::-1
                 ]  # reverse it so that it is a monotonically increasing function
-                self._defaultUnits["_fluxPres"] = str(fluxPresNode.unit)
-            except PyddError:
+                self._defaultUnits["_fluxPres"] = str(fluxPresNode.units)
+            except:
                 raise ValueError("data retrieval failed.")
         return self._fluxPres.copy()
 
@@ -756,11 +763,13 @@ class AUGMDSTree(Equilibrium):
         """
         if self._fpol is None:
             try:
-                fNode = self._MDSTree(
-                    "Jpol"
+                fNode = self._mdsaugdiag(
+                    self._tree, "Jpol"
                 )  # From definition of F with poloidal current
                 self._fpol = (
-                    fNode.data[: self._timeidxend, 1 : 2 * self._lpf + 1 : 2][::-1]
+                    fNode.data().transpose()[
+                        : self._timeidxend, 1 : 2 * self._lpf + 1 : 2
+                    ][::-1]
                     * 2e-7
                 )
                 self._defaultUnits["_fpol"] = str("T m")
@@ -779,10 +788,12 @@ class AUGMDSTree(Equilibrium):
         """
         if self._ffprim is None:
             try:
-                FFPrimeNode = self._MDSTree("FFP")
-                self._ffprim = FFPrimeNode.data[: self._timeidxend, : self._lpf][::-1]
-                self._defaultUnits["_ffprim"] = str(FFPrimeNode.unit)
-            except PyddError:
+                FFPrimeNode = self._mdsaugdiag(self._tree, "FFP")
+                self._ffprim = FFPrimeNode.data().transpose()[
+                    : self._timeidxend, : self._lpf
+                ][::-1]
+                self._defaultUnits["_ffprim"] = str(FFPrimeNode.units)
+            except:
                 raise ValueError("data retrieval failed.")
         return self._ffprim.copy()
 
@@ -798,13 +809,13 @@ class AUGMDSTree(Equilibrium):
         """
         if self._pprime is None:
             try:
-                pPrimeNode = self._MDSTree("Pres")
-                self._pprime = pPrimeNode.data[: self._timeidxend][
+                pPrimeNode = self._mdsaugdiag(self._tree, "Pres")
+                self._pprime = pPrimeNode.data().transpose()[: self._timeidxend][
                     :, 1 : 2 * self._lpf + 1 : 2
                 ][
                     :, ::-1
                 ]  # reverse it so that it is a monotonically increasing function
-                self._defaultUnits["_pprime"] = str(pPrimeNode.unit)
+                self._defaultUnits["_pprime"] = str(pPrimeNode.units)
             except PyddError:
                 raise ValueError("data retrieval failed.")
         return self._pprime.copy()
@@ -820,10 +831,10 @@ class AUGMDSTree(Equilibrium):
         """
         if self._kappa is None:
             try:
-                kappaNode = self.getSSQ("k")
-                self._kappa = kappaNode.data
-                self._defaultUnits["_kappa"] = str(kappaNode.unit)
-            except PyddError:
+                kappaNode = self._mdsaugdiag(self._treessq, "k")
+                self._kappa = kappaNode.data()
+                self._defaultUnits["_kappa"] = str(kappaNode.units)
+            except:
                 raise ValueError("data retrieval failed.")
         return self._kappa.copy()
 
@@ -838,10 +849,10 @@ class AUGMDSTree(Equilibrium):
         """
         if self._dupper is None:
             try:
-                dupperNode = self.getSSQ("delRoben")
-                self._dupper = dupperNode.data
-                self._defaultUnits["_dupper"] = str(dupperNode.unit)
-            except PyddError:
+                dupperNode = self._mdsaugdiag(self._treessq, "delRoben")
+                self._dupper = dupperNode.data()
+                self._defaultUnits["_dupper"] = str(dupperNode.units)
+            except:
                 raise ValueError("data retrieval failed.")
         return self._dupper.copy()
 
@@ -856,10 +867,10 @@ class AUGMDSTree(Equilibrium):
         """
         if self._dlower is None:
             try:
-                dlowerNode = self.getSSQ("delRuntn")
-                self._dlower = dlowerNode.data
-                self._defaultUnits["_dlower"] = str(dlowerNode.unit)
-            except PyddError:
+                dlowerNode = self._mdsaugdiag(self._treessq, "delRuntn")
+                self._dlower = dlowerNode.data()
+                self._defaultUnits["_dlower"] = str(dlowerNode.units)
+            except:
                 raise ValueError("data retrieval failed.")
         return self._dlower.copy()
 
@@ -892,10 +903,10 @@ class AUGMDSTree(Equilibrium):
         """
         if self._rmag is None:
             try:
-                rmagNode = self.getSSQ("Rmag")
-                self._rmag = rmagNode.data
-                self._defaultUnits["_rmag"] = str(rmagNode.unit)
-            except (PyddError, AttributeError):
+                rmagNode = self._mdsaugdiag(self._treessq, "Rmag")
+                self._rmag = rmagNode.data()
+                self._defaultUnits["_rmag"] = str(rmagNode.units)
+            except AttributeError:
                 raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
             self._defaultUnits["_rmag"], length_unit
@@ -913,10 +924,10 @@ class AUGMDSTree(Equilibrium):
         """
         if self._zmag is None:
             try:
-                zmagNode = self.getSSQ("Zmag")
-                self._zmag = zmagNode.data
+                zmagNode = self._mdsaugdiag(self._treessq, "Zmag")
+                self._zmag = zmagNode.data()
                 self._defaultUnits["_zmag"] = str(zmagNode.unit)
-            except PyddError:
+            except:
                 raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
             self._defaultUnits["_zmag"], length_unit
@@ -938,10 +949,10 @@ class AUGMDSTree(Equilibrium):
         """
         if self._areaLCFS is None:
             try:
-                areaLCFSNode = self._MDSTree("Area")
-                self._areaLCFS = areaLCFSNode.data[: self._timeidxend, 0]
-                self._defaultUnits["_areaLCFS"] = str(areaLCFSNode.unit)
-            except PyddError:
+                areaLCFSNode = self._mdsaugdiag(self._tree, "Area")
+                self._areaLCFS = areaLCFSNode.data().transpose()[: self._timeidxend, 0]
+                self._defaultUnits["_areaLCFS"] = str(areaLCFSNode.units)
+            except:
                 raise ValueError("data retrieval failed.")
         # Units should be cm^2:
         unit_factor = self._getLengthConversionFactor(
@@ -964,10 +975,10 @@ class AUGMDSTree(Equilibrium):
         """
         if self._aLCFS is None:
             try:
-                aLCFSNode = self.getSSQ("ahor")
-                self._aLCFS = aLCFSNode.data
+                aLCFSNode = self._mdsaugdiag(self._treessq, "ahor")
+                self._aLCFS = aLCFSNode.data()
                 self._defaultUnits["_aLCFS"] = str(aLCFSNode.unit)
-            except PyddError:
+            except:
                 raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
             self._defaultUnits["_aLCFS"], length_unit
@@ -1031,10 +1042,12 @@ class AUGMDSTree(Equilibrium):
         """
         if self._qpsi is None:
             try:
-                qpsiNode = self._MDSTree("Qpsi")
-                self._qpsi = qpsiNode.data[: self._timeidxend, : self._lpf]
-                self._defaultUnits["_qpsi"] = str(qpsiNode.unit)
-            except PyddError:
+                qpsiNode = self._mdsaugdiag(self._tree, "Qpsi")
+                self._qpsi = qpsiNode.data().transpose()[
+                    : self._timeidxend, : self._lpf
+                ]
+                self._defaultUnits["_qpsi"] = str(qpsiNode.units)
+            except:
                 raise ValueError("data retrieval failed.")
         return self._qpsi.copy()
 
@@ -1049,10 +1062,10 @@ class AUGMDSTree(Equilibrium):
         """
         if self._q0 is None:
             try:
-                q0Node = self.getSSQ("q0")
-                self._q0 = q0Node.data
-                self._defaultUnits["_q0"] = str(q0Node.unit)
-            except (PyddError, AttributeError):
+                q0Node = self._mdsaugdiag(self._treessq, "q0")
+                self._q0 = q0Node.data()
+                self._defaultUnits["_q0"] = str(q0Node.units)
+            except AttributeError:
                 raise ValueError("data retrieval failed.")
         return self._q0.copy()
 
@@ -1067,10 +1080,10 @@ class AUGMDSTree(Equilibrium):
         """
         if self._q95 is None:
             try:
-                q95Node = self.getSSQ("q95")
-                self._q95 = q95Node.data
-                self._defaultUnits["_q95"] = str(q95Node.unit)
-            except (PyddError, AttributeError):
+                q95Node = self._mdsaugdiag(self._treessq, "q95")
+                self._q95 = q95Node.data()
+                self._defaultUnits["_q95"] = str(q95Node.units)
+            except AttributeError:
                 raise ValueError("data retrieval failed.")
         return self._q95.copy()
 
@@ -1125,13 +1138,13 @@ class AUGMDSTree(Equilibrium):
         """
         if self._btaxv is None:
             try:
-                btaxvNode = self._MDSTree("Bave")
+                btaxvNode = self._mdsaugdiag(self._tree, "Bave")
                 # technically Bave is the average over the volume, but for the core its a singular value
-                self._btaxv = btaxvNode.data[
-                    : self._timeidxend, scipy.sum(btaxvNode.data, 0) != 0
+                self._btaxv = btaxvNode.data().transpose()[
+                    : self._timeidxend, np.sum(btaxvNode.data, 0) != 0
                 ][:, -1]
-                self._defaultUnits["_btaxv"] = str(btaxvNode.unit)
-            except (PyddError, AttributeError):
+                self._defaultUnits["_btaxv"] = str(btaxvNode.units)
+            except AttributeError:
                 raise ValueError("data retrieval failed.")
         return self._btaxv.copy()
 
@@ -1170,10 +1183,10 @@ class AUGMDSTree(Equilibrium):
         """
         if self._IpCalc is None:
             try:
-                IpCalcNode = self._MDSTree("IpiPSI")
-                self._IpCalc = scipy.squeeze(IpCalcNode.data)[: self._timeidxend]
-                self._defaultUnits["_IpCalc"] = str(IpCalcNode.unit)
-            except (PyddError, AttributeError):
+                IpCalcNode = self._mdsaugdiag(self._tree, "IpiPSI")
+                self._IpCalc = np.squeeze(IpCalcNode.data())[: self._timeidxend]
+                self._defaultUnits["_IpCalc"] = str(IpCalcNode.units)
+            except AttributeError:
                 raise ValueError("data retrieval failed.")
         return self._IpCalc.copy()
 
@@ -1199,10 +1212,10 @@ class AUGMDSTree(Equilibrium):
         """
         if self._Jp is None:
             try:
-                JpNode = self._MDSTree("CDM", calibrated=False)
-                self._Jp = JpNode.data
-                self._defaultUnits["_Jp"] = str(JpNode.unit)
-            except (PyddError, AttributeError):
+                JpNode = self._mdsaugdiag(self._tree, "CDM")
+                self._Jp = JpNode.data()
+                self._defaultUnits["_Jp"] = str(JpNode.units)
+            except AttributeError:
                 raise ValueError("data retrieval failed.")
         return self._Jp.copy()
 
