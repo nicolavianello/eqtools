@@ -19,7 +19,7 @@
 """Provides classes for interacting with magnetic equilibrium data in a variety of formats.
 """
 
-__version__ = '1.3.2_dev'
+__version__ = '1.3.3'
 
 from .core import *
 from .EFIT import *
@@ -27,11 +27,12 @@ from .CModEFIT import *
 from .AUGData import *
 from .NSTXEFIT import *
 from .D3DEFIT import *
+from .TCVLIUQEMAT import *
+from .JET import *
+from .AUGMDSplus import *
 from .eqdskreader import *
 from .pfilereader import *
 from .FromArrays import *
 from .TCVLIUQE import * 
-from .TCVLIUQEMAT import *
 from .filewriter import *
 from .trispline import *
-from .JET import *

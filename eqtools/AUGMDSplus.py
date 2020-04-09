@@ -151,7 +151,7 @@ class AUGMDSTree(Equilibrium):
             # self.getSSQ = dd.shotfile(
             #     shotfile2, self._shot, edition=edition, experiment=experiment
             # )
-        except (KeyError, PyddError):
+        except (KeyError):
             warnings.warn(
                 "Companion SV not valid, extracting from " + self._tree + ":SSQ",
                 RuntimeWarning,
@@ -243,16 +243,27 @@ class AUGMDSTree(Equilibrium):
 
         # Call the get functions to preload the data. Add any other calls you
         # want to preload here.
+        # I need first to make a call to conn.get otherwise does not work
+        _s = (
+            "augdiag({},".format(self._shot)
+            + '"'
+            + self._tree
+            + '","time","'
+            + self._experiment
+            + '",{}'.format(self._edition)
+            + ")"
+        )
+        _dummy  = self._MDSTree.get(_s).data()
         self.getTimeBase()  # check
         self._timeidxend = self.getTimeBase().size
-        self.getFluxGrid()  # loads _psiRZ, _rGrid and _zGrid at once. check
-        self.getFluxLCFS()  # check
-        self.getFluxAxis()  # check
-        self.getFluxVol()  # check
-        self._lpf = self.getFluxVol().shape[1]
-        self.getVolLCFS()  # check
-        self.getQProfile()  #
-
+        # self.getFluxGrid()  # loads _psiRZ, _rGrid and _zGrid at once. check
+        # self.getFluxLCFS()  # check
+        # self.getFluxAxis()  # check
+        # self.getFluxVol()  # check
+        # self._lpf = self.getFluxVol().shape[1]
+        # self.getVolLCFS()  # check
+        # self.getQProfile()  #
+    #
     def _mdsaugdiag(self, shotfile, signal):
         """ wrapper for the augdiag TDI function data"""
 
@@ -275,35 +286,35 @@ class AUGMDSTree(Equilibrium):
         _object = self._mdsaugdiag(shotfile, signal)
         return _object.getDimensionAt(dimension).data()
 
-    # def __str__(self):
-    #     """string formatting for ASDEX Upgrade Equilibrium class.
-    #     """
-    #     try:
-    #         nt = len(self._time)
-    #         nr = len(self._rGrid)
-    #         nz = len(self._zGrid)
-    #
-    #         mes = (
-    #             "AUG data for shot "
-    #             + str(self._shot)
-    #             + " from shotfile "
-    #             + str(self._tree.upper())
-    #             + "\n"
-    #             + "timebase "
-    #             + str(self._time[0])
-    #             + "-"
-    #             + str(self._time[-1])
-    #             + "s in "
-    #             + str(nt)
-    #             + " points\n"
-    #             + str(nr)
-    #             + "x"
-    #             + str(nz)
-    #             + " spatial grid"
-    #         )
-    #         return mes
-    #     except TypeError:
-    #         return "tree has failed data load."
+    def __str__(self):
+        """string formatting for ASDEX Upgrade Equilibrium class.
+        """
+        try:
+            nt = len(self._time)
+            nr = len(self._rGrid)
+            nz = len(self._zGrid)
+
+            mes = (
+                "AUG data for shot "
+                + str(self._shot)
+                + " from shotfile "
+                + str(self._tree.upper())
+                + "\n"
+                + "timebase "
+                + str(self._time[0])
+                + "-"
+                + str(self._time[-1])
+                + "s in "
+                + str(nt)
+                + " points\n"
+                + str(nr)
+                + "x"
+                + str(nz)
+                + " spatial grid"
+            )
+            return mes
+        except TypeError:
+            return "tree has failed data load."
 
     def getInfo(self):
         """returns namedtuple of shot information
@@ -344,7 +355,7 @@ class AUGMDSTree(Equilibrium):
                 timeNode = self._mdsaugdiag(self._tree, "time")
                 self._time = timeNode.data()
                 self._defaultUnits["_time"] = str(timeNode.units)
-            except PyddError:
+            except:
                 raise ValueError("data retrieval failed.")
         return self._time.copy()
 
@@ -361,17 +372,15 @@ class AUGMDSTree(Equilibrium):
         """
         if self._psiRZ is None:
             try:
-                psinode = self._mdsaugdiag(self._tree, "Ri")
-                self._rGrid = psinode.data()[
-                    :, 0
-                ]  # assumes data from first is correct (WHY IS IT EVEN DUPICATED???)
-                self._defaultUnits["_rGrid"] = str(psinode.units)
-                psinode = self._MDSTree("Zj")
-                self._zGrid = psinode.data()[:, 0]
-                self._defaultUnits["_zGrid"] = str(psinode.units)
                 psinode = self._mdsaugdiag(self._tree, "PFM")
                 self._psiRZ = np.moveaxis(psinode.data(), -1, 0)
                 self._defaultUnits["_psiRZ"] = "Vs"  # HARDCODED DUE TO CALIBRATED=FALSE
+                self._rGrid = psinode.getDimensionAt(1).data()[
+                    :, 0
+                ]  # assumes data from first is correct (WHY IS IT EVEN DUPICATED???)
+                self._defaultUnits["_rGrid"] = str('m')
+                self._zGrid = psinode.getDimensionAt(2).data()[:, 0]
+                self._defaultUnits["_zGrid"] = str('m')
 
             except:
                 raise ValueError("data retrieval failed.")
@@ -468,7 +477,7 @@ class AUGMDSTree(Equilibrium):
                     self._tree, "Vol"
                 )  # Lpf is unreliable so I have to do this trick....
                 temp = (
-                    np.where(np.sum(fluxVolNode.data(), axis=1)[::2] != 0)[0].max() + 1
+                    np.where(np.sum(fluxVolNode.data().transpose(), axis=0)[::2] != 0)[0].max() + 1
                 )  # Find the where the volume is non-zero, give the maximum index and add one (for the core value)
 
                 self._fluxVol = fluxVolNode.data().transpose()[: self._timeidxend][
@@ -476,8 +485,8 @@ class AUGMDSTree(Equilibrium):
                 ][
                     :, ::-1
                 ]  # reverse it so that it is a monotonically increasing function
-                if fluxVolNode.unit != " ":
-                    self._defaultUnits["_fluxVol"] = str(fluxVolNode.unit)
+                if fluxVolNode.units != " ":
+                    self._defaultUnits["_fluxVol"] = str(fluxVolNode.units)
                 else:
                     self._defaultUnits["_fluxVol"] = "m^3"
             except:
@@ -563,7 +572,7 @@ class AUGMDSTree(Equilibrium):
                 self.remapLCFS()
                 self._defaultUnits["_RLCFS"] = str("m")
                 self._defaultUnits["_ZLCFS"] = str("m")
-            except PyddError:
+            except:
                 raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
             self._defaultUnits["_RLCFS"], length_unit
@@ -603,7 +612,7 @@ class AUGMDSTree(Equilibrium):
                 self.remapLCFS()
                 self._defaultUnits["_RLCFS"] = str("m")
                 self._defaultUnits["_ZLCFS"] = str("m")
-            except PyddError:
+            except:
                 raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
             self._defaultUnits["_ZLCFS"], length_unit
@@ -773,7 +782,7 @@ class AUGMDSTree(Equilibrium):
                     * 2e-7
                 )
                 self._defaultUnits["_fpol"] = str("T m")
-            except PyddError:
+            except:
                 raise ValueError("data retrieval failed.")
         return self._fpol.copy()
 
@@ -816,7 +825,7 @@ class AUGMDSTree(Equilibrium):
                     :, ::-1
                 ]  # reverse it so that it is a monotonically increasing function
                 self._defaultUnits["_pprime"] = str(pPrimeNode.units)
-            except PyddError:
+            except:
                 raise ValueError("data retrieval failed.")
         return self._pprime.copy()
 
@@ -1238,10 +1247,10 @@ class AUGMDSTree(Equilibrium):
         """
         if self._betap is None:
             try:
-                betapNode = self.getSSQ("betpol")
-                self._betap = betapNode.data
-                self._defaultUnits["_betap"] = str(betapNode.unit)
-            except (PyddError, AttributeError):
+                betapNode = self._mdsaugdiag(self._treessq, "betpol")
+                self._betap = betapNode.data()
+                self._defaultUnits["_betap"] = str(betapNode.units)
+            except AttributeError:
                 raise ValueError("data retrieval failed.")
         return self._betap.copy()
 
@@ -1256,10 +1265,10 @@ class AUGMDSTree(Equilibrium):
         """
         if self._Li is None:
             try:
-                LiNode = self.getSSQ("li")
-                self._Li = LiNode.data
-                self._defaultUnits["_Li"] = str(LiNode.unit)
-            except (PyddError, AttributeError):
+                LiNode = self._mdsaugdiag(self._tree, "li")
+                self._Li = LiNode.data()
+                self._defaultUnits["_Li"] = str(LiNode.units)
+            except AttributeError:
                 raise ValueError("data retrieval failed.")
         return self._Li.copy()
 
@@ -1331,10 +1340,10 @@ class AUGMDSTree(Equilibrium):
         """
         if self._WMHD is None:
             try:
-                WMHDNode = self.getSSQ("Wmhd")
-                self._WMHD = WMHDNode.data
-                self._defaultUnits["_WMHD"] = str(WMHDNode.unit)
-            except (PyddError, AttributeError):
+                WMHDNode = self._mdsaugdiag(self._treessq, "Wmhd")
+                self._WMHD = WMHDNode.data()
+                self._defaultUnits["_WMHD"] = str(WMHDNode.units)
+            except AttributeError:
                 raise ValueError("data retrieval failed.")
         return self._WMHD.copy()
 
@@ -1383,20 +1392,24 @@ class AUGMDSTree(Equilibrium):
         if self._BCentr is None:
             try:
                 try:
-                    temp = dd.shotfile("MBI", self._shot)
-                    BCentrNode = temp("BTFABB")
+                    temp = self._mdsaugdiag("MBI", "BTFABB")
+                    BCentrNode = temp.data()
                     self._BCentr = BCentrNode.data[
-                        self._getNearestIdx(self.getTimeBase(), BCentrNode.time)
+                        self._getNearestIdx(
+                            self.getTimeBase(), temp.getDimensionAt().data()
+                        )
                     ]
-                    self._defaultUnits["_BCentr"] = str(BCentrNode.unit)
-                except PyddError:
-                    temp = dd.shotfile("MBI", self._shot)
-                    BCentrNode = temp("BTF")
+                    self._defaultUnits["_BCentr"] = str(BCentrNode.units)
+                except:
+                    temp = self._mdsaugdiag("MBI", "BTF")
+                    BCentrNode = temp.data()
                     self._BCentr = BCentrNode.data[
-                        self._getNearestIdx(self.getTimeBase(), BCentrNode.time)
+                        self._getNearestIdx(
+                            self.getTimeBase(), temp.getDimensionAt().data()
+                        )
                     ]
-                    self._defaultUnits["_BCentr"] = str(BCentrNode.unit)
-            except (PyddError, AttributeError):
+                    self._defaultUnits["_BCentr"] = str(BCentrNode.units)
+            except AttributeError:
                 raise ValueError("data retrieval failed.")
 
         return self._BCentr
@@ -1437,7 +1450,7 @@ class AUGMDSTree(Equilibrium):
                     self._shot
                 )
 
-            except (PyddError, AttributeError):
+            except AttributeError:
                 raise ValueError("data retrieval failed.")
         return (self._Rlimiter, self._Zlimiter)
 
@@ -1481,57 +1494,57 @@ class AUGMDSTree(Equilibrium):
         """
         raise NotImplementedError("self.getEnergy not implemented.")
 
-    def getSSQ(self, inp, **kwargs):
-        """returns single value quantities in the case SV file doesn't exist
-        and coniditions the data in a way that is expected from a dd SV
-        shotfile. This seamlessly hides the lack of an SV file.
-
-        Returns:
-            signal (dd.signal Object): corresponding data
-
-        Raises:
-            ValueError: if module cannot retrieve data from the AUG AFS system.
-        """
-        if self._SSQ is None:
-            try:
-                SSQnameNode = self._MDSTree("SSQnam", calibrated=False)
-                # create a dict mapping the various quantities to positions in the in the data array
-                self._SSQname = SSQnameNode.data
-                try:
-                    self._SSQname = scipy.char.strip(
-                        SSQnameNode.data.view("S" + str(SSQnameNode.data.shape[1]))
-                    )  # concatenate and strip blanks
-                except ValueError:
-                    self._SSQname = scipy.char.strip(
-                        SSQnameNode.data.T.view("S" + str(SSQnameNode.data.shape[0]))
-                    )  # concatenate and strip blanks
-
-                self._SSQname = self._SSQname[
-                    self._SSQname != ""
-                ]  # remove empty entries
-                self._SSQname = dict(
-                    zip(self._SSQname, scipy.arange(self._SSQname.shape[0]))
-                )  # zip the dict together
-
-                self._SSQ = self._MDSTree("SSQ").data
-
-            except (PyddError, AttributeError):
-                raise ValueError("data retrieval failed.")
-
-        if inp == "rays":
-            data = self._SSQ[
-                : self._timeidxend, self._SSQname["rays015"] : self._SSQname["rays000"]
-            ]  # really hackish. This line might break at some point
-            signal = dd.signalGroup(inp, " ", data)
-        else:
-            try:
-                signal = dd.signal(
-                    inp, " ", self._SSQ[: self._timeidxend, self._SSQname[inp]]
-                )
-
-            except KeyError:
-                raise ValueError("data retrieval failed.")
-        return signal
+    # def getSSQ(self, inp, **kwargs):
+    #     """returns single value quantities in the case SV file doesn't exist
+    #     and coniditions the data in a way that is expected from a dd SV
+    #     shotfile. This seamlessly hides the lack of an SV file.
+    #
+    #     Returns:
+    #         signal (dd.signal Object): corresponding data
+    #
+    #     Raises:
+    #         ValueError: if module cannot retrieve data from the AUG AFS system.
+    #     """
+    #     if self._SSQ is None:
+    #         try:
+    #             SSQnameNode = self._MDSTree("SSQnam", calibrated=False)
+    #             # create a dict mapping the various quantities to positions in the in the data array
+    #             self._SSQname = SSQnameNode.data
+    #             try:
+    #                 self._SSQname = scipy.char.strip(
+    #                     SSQnameNode.data.view("S" + str(SSQnameNode.data.shape[1]))
+    #                 )  # concatenate and strip blanks
+    #             except ValueError:
+    #                 self._SSQname = scipy.char.strip(
+    #                     SSQnameNode.data.T.view("S" + str(SSQnameNode.data.shape[0]))
+    #                 )  # concatenate and strip blanks
+    #
+    #             self._SSQname = self._SSQname[
+    #                 self._SSQname != ""
+    #             ]  # remove empty entries
+    #             self._SSQname = dict(
+    #                 zip(self._SSQname, scipy.arange(self._SSQname.shape[0]))
+    #             )  # zip the dict together
+    #
+    #             self._SSQ = self._MDSTree("SSQ").data
+    #
+    #         except (PyddError, AttributeError):
+    #             raise ValueError("data retrieval failed.")
+    #
+    #     if inp == "rays":
+    #         data = self._SSQ[
+    #             : self._timeidxend, self._SSQname["rays015"] : self._SSQname["rays000"]
+    #         ]  # really hackish. This line might break at some point
+    #         signal = dd.signalGroup(inp, " ", data)
+    #     else:
+    #         try:
+    #             signal = dd.signal(
+    #                 inp, " ", self._SSQ[: self._timeidxend, self._SSQname[inp]]
+    #             )
+    #
+    #         except KeyError:
+    #             raise ValueError("data retrieval failed.")
+    #     return signal
 
 
 class YGCAUGInterface(object):
@@ -2837,6 +2850,23 @@ class YGCAUGInterface(object):
         ]
     )
 
+    def _mdsaugdiag(self, shot, shotfile, signal):
+        """ wrapper for the augdiag TDI function data"""
+
+        # augdiag (_shot, _diag, _signame, _experiment, _edition, _t1, _t2, _oshot, _oedition)
+        _s = (
+            "augdiag({},".format(self._shot)
+            + '"'
+            + shotfile
+            + '","'
+            + signal
+            + '","'
+            + self._experiment
+            + '",{}'.format(self._edition)
+            + ")"
+        )
+        return self._MDSTree.getObject(_s)
+
     def _getData(self, shot):
         try:
 
@@ -2847,17 +2877,15 @@ class YGCAUGInterface(object):
             ]  # find nearest shotfile which is the before it
 
             if self._ygc_shot < 8650:
-                ccT = dd.shotfile(
-                    "YGC", self._ygc_shotfiles[2]
-                )  # This is because of shots <8650 not having RrGC zzGC or inxbeg
+                _shot = self._ygc_shotfiles[2]
             else:
-                ccT = dd.shotfile("YGC", self._ygc_shot)
-            xvctr = ccT("RrGC")
-            yvctr = ccT("zzGC")
-            nvctr = ccT("inxbeg")
+                _shot = self._ygc_shot
+            xvctr = self._mdsaugdiag(_shot, 'YGC','RrGC')
+            yvctr = self._mdsaugdiag(_shot, 'YGC',"zzGC")
+            nvctr = self._mdsaugdiag(_shot, 'YGC',"inxbeg")
             nvctr = nvctr.data.astype(int) - 1
 
-        except (PyddError, AttributeError):
+        except (AttributeError):
             raise ValueError("data retrieval failed.")
 
         except:
@@ -2934,13 +2962,13 @@ class YGCAUGInterface(object):
         return (x, y)
 
 
-if _has_dd:
+if _has_MDS:
     AUGVessel = YGCAUGInterface()  # import setting necessary to get the vacuum vessel
 
 
-class AUGDDDataProp(AUGDDData, PropertyAccessMixin):
-    """AUGDDData with the PropertyAccessMixin added to enable property-style
-    access. This is good for interactive use, but may drag the performance down.
-    """
-
-    pass
+# class AUGDDDataProp(AUGDDData, PropertyAccessMixin):
+#     """AUGDDData with the PropertyAccessMixin added to enable property-style
+#     access. This is good for interactive use, but may drag the performance down.
+#     """
+#
+#     pass
