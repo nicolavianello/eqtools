@@ -256,13 +256,13 @@ class AUGMDSTree(Equilibrium):
         _dummy  = self._MDSTree.get(_s).data()
         self.getTimeBase()  # check
         self._timeidxend = self.getTimeBase().size
-        # self.getFluxGrid()  # loads _psiRZ, _rGrid and _zGrid at once. check
-        # self.getFluxLCFS()  # check
-        # self.getFluxAxis()  # check
-        # self.getFluxVol()  # check
-        # self._lpf = self.getFluxVol().shape[1]
-        # self.getVolLCFS()  # check
-        # self.getQProfile()  #
+        self.getFluxGrid()  # loads _psiRZ, _rGrid and _zGrid at once. check
+        self.getFluxLCFS()  # check
+        self.getFluxAxis()  # check
+        self.getFluxVol()  # check
+        self._lpf = self.getFluxVol().shape[1]
+        self.getVolLCFS()  # check
+        self.getQProfile()  #
     #
     def _mdsaugdiag(self, shotfile, signal):
         """ wrapper for the augdiag TDI function data"""
@@ -485,10 +485,7 @@ class AUGMDSTree(Equilibrium):
                 ][
                     :, ::-1
                 ]  # reverse it so that it is a monotonically increasing function
-                if fluxVolNode.units != " ":
-                    self._defaultUnits["_fluxVol"] = str(fluxVolNode.units)
-                else:
-                    self._defaultUnits["_fluxVol"] = "m^3"
+                self._defaultUnits["_fluxVol"] = "m^3"
             except:
                 raise ValueError("data retrieval failed.")
         # Default units are m^3, but aren't stored in the tree!
@@ -513,8 +510,8 @@ class AUGMDSTree(Equilibrium):
         if self._volLCFS is None:
             try:
                 volLCFSNode = self._mdsaugdiag(self._tree, "Vol")
-                self._volLCFS = volLCFSNode.data[0, : self._timeidxend]
-                self._defaultUnits["_volLCFS"] = str(volLCFSNode.units)
+                self._volLCFS = volLCFSNode.data().transpose()[: self._timeidxend, 0]
+                self._defaultUnits["_volLCFS"] = 'm^3'
             except:
                 raise ValueError("data retrieval failed.")
         # Default units should be 'cm^3':
@@ -567,7 +564,7 @@ class AUGMDSTree(Equilibrium):
                         (np.linspace(0, 2 * scipy.pi, templen[1] + 1)), (templen[0], 1),
                     )
                 )  # construct a 2d grid of angles, take cos, multiply by radius
-                self._defaultUnits["_RLCFS"] = str(RLCFSNode.unit)
+                self._defaultUnits["_RLCFS"] = str('m')
             except KeyError:
                 self.remapLCFS()
                 self._defaultUnits["_RLCFS"] = str("m")
@@ -607,7 +604,7 @@ class AUGMDSTree(Equilibrium):
                         (np.linspace(0, 2 * np.pi, templen[1] + 1)), (templen[0], 1),
                     )
                 )  # construct a 2d grid of angles, take sin, multiply by radius
-                self._defaultUnits["_ZLCFS"] = str(ZLCFSNode.unit)
+                self._defaultUnits["_ZLCFS"] = str('m')
             except KeyError:
                 self.remapLCFS()
                 self._defaultUnits["_RLCFS"] = str("m")
@@ -2855,15 +2852,11 @@ class YGCAUGInterface(object):
 
         # augdiag (_shot, _diag, _signame, _experiment, _edition, _t1, _t2, _oshot, _oedition)
         _s = (
-            "augdiag({},".format(self._shot)
-            + '"'
+            'augdiag({},"'.format(shot)
             + shotfile
-            + '","'
+            + '",'''
             + signal
-            + '","'
-            + self._experiment
-            + '",{}'.format(self._edition)
-            + ")"
+            + '","AUGD", 0)'
         )
         return self._MDSTree.getObject(_s)
 
@@ -2883,7 +2876,7 @@ class YGCAUGInterface(object):
             xvctr = self._mdsaugdiag(_shot, 'YGC','RrGC')
             yvctr = self._mdsaugdiag(_shot, 'YGC',"zzGC")
             nvctr = self._mdsaugdiag(_shot, 'YGC',"inxbeg")
-            nvctr = nvctr.data.astype(int) - 1
+            nvctr = nvctr.data().astype(int) - 1
 
         except (AttributeError):
             raise ValueError("data retrieval failed.")
