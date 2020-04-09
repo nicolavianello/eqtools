@@ -13,12 +13,12 @@ tricub = Extension('eqtools._tricub',['eqtools/_tricub.pyf','eqtools/_tricub.c']
 
 setup(
     name='eqtools',
-    version='1.3.1',
+    version='1.3.3',
     packages=['eqtools',],
     install_requires=['scipy', 'numpy', 'matplotlib'],
-    author=['Mark Chilenski','Ian Faust','John Walk'],
+    author=['Mark Chilenski','Ian Faust','John Walk','Nicola Vianello'],
     author_email='psfcplasmatools@mit.edu',
-    url='https://github.com/PSFCPlasmaTools/eqtools/',
+    url='https://github.com/nicolavianello/eqtools/',
     description='Python tools for magnetic equilibria in tokamak plasmas',
     long_description=open('README.md', 'r').read(),
     ext_modules = [tricub,],
