@@ -53,6 +53,11 @@ try:
     import matplotlib.pyplot as plt
 
     _has_plt = True
+    try:
+        import matplotlib._cntr as cntr
+    except:
+        import legacycontour._cntr as cntr
+
 except:
     warnings.warn(
         "Matplotlib.pyplot module could not be loaded -- classes that "
@@ -664,19 +669,22 @@ class AUGMDSTree(Equilibrium):
         R = self.getRGrid()
         Z = self.getZGrid()
         psiLCFS = self.getFluxLCFS()
+        # build a mesh grid
+        RR,ZZ = scipy.meshgrid(R, Z)
+
 
         RLCFS_stores = []
         ZLCFS_stores = []
         maxlen = 0
         nt = len(self.getTimeBase())
-        fig = plt.figure()
+#        fig = plt.figure()
         for i in range(nt):
-            cs = plt.contour(R, Z, psiRZ[i], [psiLCFS[i]])
-            paths = cs.collections[0].get_paths()
+            cs = cntr.Cntr(RR, ZZ, psiRZ[i])
+            nlist = cs.trace(psiLCFS[i])
+            segs = nlist[: len(nlist) // 2]
             RLCFS_frame = []
             ZLCFS_frame = []
-            for path in paths:
-                v = path.vertices
+            for v in segs:
                 RLCFS_frame.extend(v[:, 0])
                 ZLCFS_frame.extend(v[:, 1])
                 RLCFS_frame.append(scipy.nan)
@@ -717,12 +725,6 @@ class AUGMDSTree(Equilibrium):
         zUnit = self._defaultUnits["_zGrid"]
         self._defaultUnits["_RLCFS"] = rUnit
         self._defaultUnits["_ZLCFS"] = zUnit
-
-        # cleanup
-        plt.ion()
-        plt.clf()
-        plt.close(fig)
-        plt.ioff()
 
     def getF(self):
         """returns F=RB_{\Phi}(\Psi), often calculated for grad-shafranov 
