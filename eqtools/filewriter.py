@@ -103,7 +103,7 @@ def gfile(obj, tin, nw=None, nh=None, shot=None, name=None, tunit = 'ms', title=
     rgrid2,zgrid2 = scipy.meshgrid(rgrid,zgrid)
     print(header)
 
-    gfiler =open(name, 'wb')
+    gfiler =open(name, 'w')
     gfiler.write(header)
     
     gfiler.write(_fmt([obj.getRGrid()[-1]-obj.getRGrid()[0],
