@@ -255,7 +255,7 @@ def _findLCFS(rgrid, zgrid, psiRZ, rcent, zcent, psiLCFS, nbbbs=100):
         temp = scipy.diff(thetvals)
         idx = 0
         sign = scipy.sign(temp[0])
-        for j in xrange(len(temp)-1):
+        for j in range(len(temp)-1):
             
             if (scipy.sign(temp[j+1]) != sign): 
                 sign = scipy.sign(temp[j+1])
@@ -286,7 +286,7 @@ def _findLCFS(rgrid, zgrid, psiRZ, rcent, zcent, psiLCFS, nbbbs=100):
     # an infite value, which is then tossed out.
     outr = scipy.empty((nbbbs,))
 
-    for i in xrange(nbbbs):
+    for i in range(nbbbs):
         temp = scipy.inf
         for j in splines:
             pos = j(ang[i])

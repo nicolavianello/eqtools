@@ -371,7 +371,7 @@ class AUGMDSTree(Equilibrium):
             try:
                 timeNode = self._mdsaugdiag(self._tree, "time")
                 self._time = timeNode.data()
-                self._defaultUnits["_time"] = str(timeNode.units)
+                self._defaultUnits["_time"] = str('s')
             except:
                 raise ValueError("data retrieval failed.")
         return self._time.copy()
@@ -928,7 +928,7 @@ class AUGMDSTree(Equilibrium):
             try:
                 rmagNode = self._mdsaugdiag(self._treessq, "Rmag")
                 self._rmag = rmagNode.data()
-                self._defaultUnits["_rmag"] = str(rmagNode.units)
+                self._defaultUnits["_rmag"] = str('m')
             except AttributeError:
                 raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
@@ -949,7 +949,7 @@ class AUGMDSTree(Equilibrium):
             try:
                 zmagNode = self._mdsaugdiag(self._treessq, "Zmag")
                 self._zmag = zmagNode.data()
-                self._defaultUnits["_zmag"] = str(zmagNode.unit)
+                self._defaultUnits["_zmag"] = str('m')
             except:
                 raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
@@ -1408,7 +1408,7 @@ class AUGMDSTree(Equilibrium):
                 try:
                     temp = self._mdsaugdiag("MBI", "BTFABB")
                     BCentrNode = temp.data()
-                    self._BCentr = BCentrNode.data[
+                    self._BCentr = BCentrNode[
                         self._getNearestIdx(
                             self.getTimeBase(), temp.getDimensionAt().data()
                         )
@@ -1417,7 +1417,7 @@ class AUGMDSTree(Equilibrium):
                 except:
                     temp = self._mdsaugdiag("MBI", "BTF")
                     BCentrNode = temp.data()
-                    self._BCentr = BCentrNode.data[
+                    self._BCentr = BCentrNode[
                         self._getNearestIdx(
                             self.getTimeBase(), temp.getDimensionAt().data()
                         )
