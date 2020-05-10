@@ -242,6 +242,8 @@ class AUGMDSTree(Equilibrium):
         self._volLCFS = None  # volume within LCFS (t)
         self._qpsi = None  # q profile (psi,t)
         self._RmidPsi = None  # max major radius of flux surface (t,psi)
+        self._xlow = None  # (r, z) position of the lower x-point (r, z, t)
+        self._xup = None  # (r, z) position of the upper x-point (r, z, t)
 
         # AUG SV file flag
         self._SSQ = None
@@ -371,7 +373,7 @@ class AUGMDSTree(Equilibrium):
             try:
                 timeNode = self._mdsaugdiag(self._tree, "time")
                 self._time = timeNode.data()
-                self._defaultUnits["_time"] = str('s')
+                self._defaultUnits["_time"] = str("s")
             except:
                 raise ValueError("data retrieval failed.")
         return self._time.copy()
@@ -670,14 +672,13 @@ class AUGMDSTree(Equilibrium):
         Z = self.getZGrid()
         psiLCFS = self.getFluxLCFS()
         # build a mesh grid
-        RR,ZZ = scipy.meshgrid(R, Z)
-
+        RR, ZZ = scipy.meshgrid(R, Z)
 
         RLCFS_stores = []
         ZLCFS_stores = []
         maxlen = 0
         nt = len(self.getTimeBase())
-#        fig = plt.figure()
+        #        fig = plt.figure()
         for i in range(nt):
             cs = cntr.Cntr(RR, ZZ, psiRZ[i])
             nlist = cs.trace(psiLCFS[i])
@@ -928,7 +929,7 @@ class AUGMDSTree(Equilibrium):
             try:
                 rmagNode = self._mdsaugdiag(self._treessq, "Rmag")
                 self._rmag = rmagNode.data()
-                self._defaultUnits["_rmag"] = str('m')
+                self._defaultUnits["_rmag"] = str("m")
             except AttributeError:
                 raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
@@ -949,7 +950,7 @@ class AUGMDSTree(Equilibrium):
             try:
                 zmagNode = self._mdsaugdiag(self._treessq, "Zmag")
                 self._zmag = zmagNode.data()
-                self._defaultUnits["_zmag"] = str('m')
+                self._defaultUnits["_zmag"] = str("m")
             except:
                 raise ValueError("data retrieval failed.")
         unit_factor = self._getLengthConversionFactor(
@@ -1439,13 +1440,45 @@ class AUGMDSTree(Equilibrium):
             self._defaultUnits["_RCentr"] = "m"
         return self._RCentr
 
-    def getEnergy(self):
-        """pulls the calculated energy parameters - stored energy, tau_E, 
-        injected power, d/dt of magnetic and plasma stored energy.
+    def getLowerXpoint(self):
+        """Returns (R, Z) values of the lower x-points as a function of time
 
-        Raises:
-            NotImplementedError: Not implemented on ASDEX-Upgrade reconstructions.
+        Returns:
+            R, Z: of the lower X-point as a function of time
         """
+        if self._xlow is None:
+            try:
+                self._xlow = np.zeros((2, self._time.size))
+                self._xlow[0, :] = self._mdsaugdiag(self._treessq, "Rxpu")
+                self._xlow[1, :] = self._mdsaugdiag(self._treessq, "Zxpu")
+                self._defaultUnits["_xlow"] = "m"
+            except AttributeError:
+                raise ValueError("data retrieval failed.")
+        return self._xlow.copy()
+
+    def getUpperXpoint(self):
+        """Returns (R, Z) values of the upper x-points as a function of time
+
+        Returns:
+            R, Z: of the upper X-point as a function of time
+        """
+        if self._xup is None:
+            try:
+                self._xup = np.zeros((2, self._time.size))
+                self._xup[0, :] = self._mdsaugdiag(self._treessq, "Rxpo")
+                self._xup[1, :] = self._mdsaugdiag(self._treessq, "Zxpo")
+                self._defaultUnits["_xup"] = "m"
+            except AttributeError:
+                raise ValueError("data retrieval failed.")
+        return self._xup.copy()
+
+    def getEnergy(self):
+        """pulls the calculated energy parameters - stored energy, tau_E,
+            injected power, d/dt of magnetic and plasma stored energy.
+
+            Raises:
+                NotImplementedError: Not implemented on ASDEX-Upgrade reconstructions.
+            """
         raise NotImplementedError("self.getEnergy not implemented.")
 
     def getMachineCrossSection(self):
