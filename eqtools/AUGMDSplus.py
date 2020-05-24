@@ -272,7 +272,6 @@ class AUGMDSTree(Equilibrium):
         self.getQProfile()  #
         self._ygcauginterface()  # needed to initialize Vessel properties
         self.getBtVac()
-        self.getBCentr()
         self.remapLCFS()
 
     #
