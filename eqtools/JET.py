@@ -30,13 +30,22 @@ try:
     from jet.data.sal import SALException
 
     _has_sal = True
-except ImportError:
-    warnings.warn(
-        "sal module could not be loaded -- classes that use "
-        "sal for data access will not work.",
-        ModuleWarning,
-    )
+except Exception as _e_sal:
+    if isinstance(_e_sal, ImportError):
+        warnings.warn(
+            "sal module could not be loaded -- classes that use "
+            "sal for data access will not work.",
+            ModuleWarning,
+        )
+    else:
+        warnings.warn(
+            "sal module could not be loaded -- classes that use "
+            "sal for data access will not work.",
+            ModuleWarning,
+        )
+
     _has_sal = False
+
 try:
     import matplotlib.pyplot as plt
 

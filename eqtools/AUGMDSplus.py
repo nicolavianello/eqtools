@@ -271,6 +271,8 @@ class AUGMDSTree(Equilibrium):
         self.getVolLCFS()  # check
         self.getQProfile()  #
         self._ygcauginterface()  # needed to initialize Vessel properties
+        self.getBtVac()
+        self.getBCentr()
         self.remapLCFS()
 
     #
@@ -289,7 +291,7 @@ class AUGMDSTree(Equilibrium):
             + '",{}'.format(self._edition)
             + ")"
         )
-        return self._MDSTree.getObject(_s, timeout=1000000)
+        return self._MDSTree.getObject(_s, timeout=3000000)
 
     def _mdsaugvessel(self, shot, shotfile, signal):
         """ wrapper for the augdiag TDI function data time"""
