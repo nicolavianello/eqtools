@@ -9353,9 +9353,10 @@ class Equilibrium(object):
                     self.getTimeBase()[idx]
                 )
                 # Correct for the slight issues at the magnetic axis:
-                _idxnegative = np.where(psi_norm_on_grid < 0)[0]
-                psi_norm_on_grid[_idxnegative[0]:_idxnegative[-1]+1] = scipy.linspace(
-                    0, psi_norm_on_grid[_idxnegative[-1]+1], len(_idxnegative)+1)[:-1]
+                _idxnegative = scipy.where(psi_norm_on_grid < 0)[0]
+                if _idxnegative.size:
+                    psi_norm_on_grid[_idxnegative[0]:_idxnegative[-1]+1] = scipy.linspace(
+                        0, psi_norm_on_grid[_idxnegative[-1]+1], len(_idxnegative)+1)[:-1]
                 #psi_norm_on_grid[0] = 0.0
                 # Find if it ever goes non-monotonic: psinorm is assumed to be
                 # strictly INCREASING from the magnetic axis out.
